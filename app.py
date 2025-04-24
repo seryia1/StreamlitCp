@@ -870,7 +870,7 @@ render_header()
 import gdown
 
 
-url = 'https://drive.google.com/uc?id=YOUR_FILE_ID'
+url = 'https://drive.google.com/file/d/1ID5q6utffmHh7kTeXKbpcPftLWVt0j2v/view?usp=drive_link'
 output = 'data.csv'
 gdown.download(url, output, quiet=False)
 

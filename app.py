@@ -873,26 +873,7 @@ try:
 except Exception as e:
     st.error(f"Error loading data or model: {e}")
     st.warning("Please update the file paths in the code to match your environment.")
-# Create a sample for prediction
-    sample = pd.DataFrame({
-    'user_id': [1],
-    'REGION': [region],  # Just use the selected region
-    'TENURE': [tenure],
-    'MONTANT': [montant],
-    'FREQUENCE_RECH': [freq_rech],
-    'REVENUE': [revenue],
-    'ARPU_SEGMENT': [arpu],
-    'FREQUENCE': [np.random.randint(0, 50)],
-    'DATA_VOLUME': [data_volume],
-    'ON_NET': [np.random.uniform(0, 1000)],
-    'ORANGE': [np.random.uniform(0, 500)],
-    'TIGO': [np.random.uniform(0, 500)],
-    'ZONE1': [np.random.uniform(0, 200)],
-    'ZONE2': [np.random.uniform(0, 100)],
-    'MRG': [np.random.choice([0, 1])],
-    'REGULARITY': [regularity]
-})
-    model = None
+
 
 # === EXPRESSO BACKGROUND IMAGES ===
 # Using direct image URLs for better reliability

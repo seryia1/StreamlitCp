@@ -876,7 +876,7 @@ except Exception as e:
     # Create sample data for demonstration
     df = pd.DataFrame({
         'user_id': range(1, 11),
-        'REGION': ['Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', '  'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies'],
+        'REGION': ['Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies'],
         'TENURE': [12, 24, 36, 6, 18, 30, 9, 15, 27, 3],
         'MONTANT': [15000, 25000, 10000, 30000, 20000, 15000, 25000, 10000, 30000, 20000],
         'FREQUENCE_RECH': [10, 15, 5, 20, 12, 8, 18, 7, 14, 9],

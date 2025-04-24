@@ -8,4 +8,5 @@ scikit-learn
 plotly
 pydeck
 streamlit-extras
+gdown
 

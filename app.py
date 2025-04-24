@@ -873,26 +873,25 @@ try:
 except Exception as e:
     st.error(f"Error loading data or model: {e}")
     st.warning("Please update the file paths in the code to match your environment.")
-    # Create sample data for demonstration
-    df = pd.DataFrame({
-        'user_id': range(1, 11),
-        'REGION': ['Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies'],
-        'TENURE': [12, 24, 36, 6, 18, 30, 9, 15, 27, 3],
-        'MONTANT': [15000, 25000, 10000, 30000, 20000, 15000, 25000, 10000, 30000, 20000],
-        'FREQUENCE_RECH': [10, 15, 5, 20, 12, 8, 18, 7, 14, 9],
-        'REVENUE': [5000, 8000, 3000, 10000, 7000, 4000, 9000, 2000, 6000, 5000],
-        'ARPU_SEGMENT': ['Medium', 'High', 'Low', 'High', 'Medium', 'Low', 'High', 'Low', 'Medium', 'Low'],
-        'FREQUENCE': [25, 40, 15, 45, 30, 20, 35, 10, 28, 22],
-        'DATA_VOLUME': [2000, 5000, 1000, 8000, 3000, 1500, 6000, 800, 4000, 1200],
-        'ON_NET': [500, 800, 300, 1000, 600, 400, 900, 200, 700, 350],
-        'ORANGE': [200, 350, 100, 400, 250, 150, 300, 80, 220, 120],
-        'TIGO': [150, 300, 80, 350, 200, 100, 250, 50, 180, 90],
-        'ZONE1': [50, 100, 20, 150, 80, 30, 120, 10, 70, 40],
-        'ZONE2': [30, 60, 10, 80, 40, 20, 70, 5, 35, 25],
-        'MRG': [0, 1, 0, 1, 0, 0, 1, 0, 1, 0],
-        'REGULARITY': [7, 9, 4, 8, 6, 5, 8, 3, 7, 4],
-        'CHURN': [0, 1, 0, 1, 0, 0, 1, 0, 1, 0]
-    })
+# Create a sample for prediction
+    sample = pd.DataFrame({
+    'user_id': [1],
+    'REGION': [region],  # Just use the selected region
+    'TENURE': [tenure],
+    'MONTANT': [montant],
+    'FREQUENCE_RECH': [freq_rech],
+    'REVENUE': [revenue],
+    'ARPU_SEGMENT': [arpu],
+    'FREQUENCE': [np.random.randint(0, 50)],
+    'DATA_VOLUME': [data_volume],
+    'ON_NET': [np.random.uniform(0, 1000)],
+    'ORANGE': [np.random.uniform(0, 500)],
+    'TIGO': [np.random.uniform(0, 500)],
+    'ZONE1': [np.random.uniform(0, 200)],
+    'ZONE2': [np.random.uniform(0, 100)],
+    'MRG': [np.random.choice([0, 1])],
+    'REGULARITY': [regularity]
+})
     model = None
 
 # === EXPRESSO BACKGROUND IMAGES ===

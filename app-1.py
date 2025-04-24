@@ -7,9 +7,9 @@ from sklearn.impute import SimpleImputer
 
 # Load trained model and preprocessing objects
 model = joblib.load("logistic_regression_model.pkl")  # Either Random Forest or Logistic Regression
-scaler = joblib.load("scaler.pkl")
-imputer = joblib.load("imputer.pkl")
-features = joblib.load("feature_names.pkl")  # List of columns used during training
+scaler = joblib.load("scaler.joblib")
+imputer = joblib.load("imputer.joblib")
+features = joblib.load("feature_names.joblib")  # List of columns used during training
 
 # Title
 st.set_page_config(page_title="Churn Prediction App", layout="centered")

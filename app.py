@@ -866,13 +866,17 @@ def render_header():
 render_header()
 
 # === LOAD DATA AND MODEL ===
-try:
-    # Replace with your actual dataset and model paths
-    df = pd.read_csv('expresso_churn_dataset.csv')
-    model = joblib.load("expresso_churn_model.joblib")
-except Exception as e:
-    st.error(f"Error loading data or model: {e}")
-    st.warning("Please update the file paths in the code to match your environment.")
+
+import gdown
+
+
+url = 'https://drive.google.com/uc?id=YOUR_FILE_ID'
+output = 'data.csv'
+gdown.download(url, output, quiet=False)
+
+df = pd.read_csv(output)
+model = joblib.load("logistic_regression_model.joblib")
+
 
 
 # === EXPRESSO BACKGROUND IMAGES ===

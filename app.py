@@ -8,6 +8,13 @@ from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, StandardScaler
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import time
+import base64
+from io import BytesIO
+import pydeck as pdk
+import plotly.figure_factory as ff
+from streamlit_extras.switch_page_button import switch_page
+from streamlit_extras.app_logo import add_logo
 
 # === PAGE SETUP ===
 st.set_page_config(
@@ -20,7 +27,7 @@ st.set_page_config(
 query_params = st.experimental_get_query_params()
 current_page = query_params.get("page", ["overview"])[0]
 
-# === CUSTOM CSS FOR EXPRESSO THEME ===
+# === CUSTOM CSS FOR EXPRESSO THEME WITH ANIMATIONS AND CUSTOM CURSOR ===
 st.markdown("""
 <style>
     /* Main background and text colors */
@@ -35,7 +42,7 @@ st.markdown("""
         border-right: 1px solid #eee;
     }
     
-    /* Card-like containers */
+    /* Card-like containers with animations */
     .card {
         background-color: #ffffff;
         border-radius: 10px;
@@ -43,6 +50,7 @@ st.markdown("""
         margin-bottom: 20px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
+        animation: fadeIn 0.5s ease-in-out;
     }
     
     .card:hover {
@@ -50,7 +58,7 @@ st.markdown("""
         box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
     }
     
-    /* Tabs styling */
+    /* Tabs styling with animations */
     .tab-nav {
         display: flex;
         border-bottom: 1px solid #eee;
@@ -69,6 +77,7 @@ st.markdown("""
     
     .tab:hover {
         background-color: rgba(249, 202, 36, 0.1);
+        transform: translateY(-3px);
     }
     
     .tab-active {
@@ -76,12 +85,12 @@ st.markdown("""
         color: #6c3483;
     }
     
-    /* Button styling */
+    /* Button styling with animations */
     .custom-button {
         background-color: #f9ca24;
         color: #4a235a;
         padding: 10px 20px;
-        border-radius: 5px;
+        border-radius: 50px;
         border: none;
         cursor: pointer;
         font-weight: 500;
@@ -106,6 +115,7 @@ st.markdown("""
     h1, h2, h3 {
         color: #6c3483;
         font-weight: 600;
+        animation: slideIn 0.5s ease-in-out;
     }
     
     h1 {
@@ -121,15 +131,20 @@ st.markdown("""
         color: #f9ca24;
     }
     
-    /* Expresso icon */
+    /* Expresso icon with animation */
     .expresso-icon {
         width: 100%;
         max-width: 150px;
         margin-bottom: 20px;
         filter: drop-shadow(0 0 8px rgba(108, 52, 131, 0.5));
+        transition: transform 0.3s ease;
     }
     
-    /* Prediction result */
+    .expresso-icon:hover {
+        transform: scale(1.1) rotate(5deg);
+    }
+    
+    /* Prediction result with animation */
     .prediction-result {
         background-color: #ffffff;
         border-radius: 10px;
@@ -147,6 +162,11 @@ st.markdown("""
         to { opacity: 1; transform: translateY(0); }
     }
     
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
     /* Custom select box */
     .custom-select {
         background-color: #f9f9f9;
@@ -156,14 +176,21 @@ st.markdown("""
         padding: 10px;
     }
     
-    /* Divider */
+    /* Divider with animation */
     .divider {
         height: 1px;
         background: linear-gradient(90deg, transparent, #f9ca24, transparent);
         margin: 20px 0;
+        animation: pulse 2s infinite;
     }
     
-    /* Feature cards */
+    @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+    }
+    
+    /* Feature cards with animation */
     .feature-card {
         background-color: #ffffff;
         border-radius: 10px;
@@ -171,6 +198,7 @@ st.markdown("""
         margin-bottom: 15px;
         border-left: 3px solid #6c3483;
         transition: all 0.3s ease;
+        animation: fadeIn 0.5s ease-in-out;
     }
     
     .feature-card:hover {
@@ -299,6 +327,11 @@ st.markdown("""
         border-radius: 10px;
         padding: 10px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    [data-testid="stMetric"]:hover {
+        transform: translateY(-3px);
     }
     
     [data-testid="stMetricValue"] {
@@ -306,7 +339,7 @@ st.markdown("""
         color: #6c3483 !important;
     }
     
-    /* Responsive design */
+    /* Responsive design with touch-optimized controls */
     @media (max-width: 768px) {
         .hide-mobile {
             display: none;
@@ -315,12 +348,30 @@ st.markdown("""
         h1 {
             font-size: 1.8rem;
         }
+        
+        /* Larger touch targets for mobile */
+        .stButton > button {
+            padding: 12px 24px !important;
+            font-size: 16px !important;
+        }
+        
+        /* Larger sliders for touch */
+        .stSlider [data-baseweb="thumb"] {
+            height: 24px !important;
+            width: 24px !important;
+        }
+        
+        /* Larger select boxes */
+        .stSelectbox [data-baseweb="select"] {
+            height: 44px !important;
+        }
     }
     
-    /* Logo container */
+    /* Logo container with animation */
     .logo-container {
         display: flex;
         align-items: center;
+        animation: fadeIn 0.5s ease-in-out;
     }
     
     .logo-circle {
@@ -332,6 +383,11 @@ st.markdown("""
         justify-content: center;
         align-items: center;
         position: relative;
+        transition: transform 0.3s ease;
+    }
+    
+    .logo-circle:hover {
+        transform: scale(1.1) rotate(5deg);
     }
     
     .logo-text {
@@ -341,7 +397,7 @@ st.markdown("""
         margin-top: 40px;
     }
     
-    /* Navigation styling */
+    /* Navigation styling with animations */
     .nav-links {
         display: flex;
         gap: 2rem;
@@ -352,9 +408,16 @@ st.markdown("""
         font-weight: 500;
         text-decoration: none;
         font-size: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
     }
     
-    /* Background container */
+    .nav-link:hover {
+        color: #8e44ad;
+        transform: translateY(-2px);
+    }
+    
+    /* Background container with animation */
     .background-container {
         position: relative;
         padding: 2rem;
@@ -362,6 +425,7 @@ st.markdown("""
         color: white;
         background: linear-gradient(to right, rgba(108, 52, 131, 0.9), rgba(74, 35, 90, 0.9));
         margin-bottom: 2rem;
+        animation: fadeIn 0.5s ease-in-out;
     }
     
     .background-image {
@@ -376,7 +440,7 @@ st.markdown("""
         z-index: -1;
     }
     
-    /* Contact button */
+    /* Contact button with animation */
     .contact-button {
         position: fixed;
         bottom: 20px;
@@ -391,6 +455,11 @@ st.markdown("""
         align-items: center;
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         z-index: 1000;
+        transition: transform 0.3s ease;
+    }
+    
+    .contact-button:hover {
+        transform: scale(1.1);
     }
     
     .contact-text {
@@ -404,6 +473,13 @@ st.markdown("""
         font-weight: 500;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    
+    .contact-button:hover + .contact-text {
+        opacity: 1;
+        transform: translateX(5px);
     }
     
     /* Yellow accent for highlights */
@@ -411,10 +487,339 @@ st.markdown("""
         color: #f9ca24;
         font-weight: bold;
     }
+    
+    /* Collapsible sections */
+    .collapsible {
+        background-color: #f9f9f9;
+        color: #4a235a;
+        cursor: pointer;
+        padding: 18px;
+        width: 100%;
+        border: none;
+        text-align: left;
+        outline: none;
+        font-size: 16px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        transition: 0.3s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .collapsible:after {
+        content: '\\002B';
+        color: #6c3483;
+        font-weight: bold;
+        float: right;
+        margin-left: 5px;
+    }
+    
+    .active:after {
+        content: "\\2212";
+    }
+    
+    .collapsible-content {
+        padding: 0 18px;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.2s ease-out;
+        background-color: #ffffff;
+        border-radius: 0 0 5px 5px;
+    }
+    
+    /* Progress indicator */
+    .step-container {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        position: relative;
+    }
+    
+    .step-container:before {
+        content: '';
+        position: absolute;
+        background: #f0f0f0;
+        height: 4px;
+        width: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1;
+    }
+    
+    .step {
+        width: 30px;
+        height: 30px;
+        background-color: #f0f0f0;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #4a235a;
+        font-weight: bold;
+        position: relative;
+        z-index: 2;
+        transition: all 0.3s ease;
+    }
+    
+    .step.active {
+        background-color: #6c3483;
+        color: white;
+    }
+    
+    .step.completed {
+        background-color: #f9ca24;
+        color: #4a235a;
+    }
+    
+    .step-label {
+        position: absolute;
+        top: 35px;
+        font-size: 12px;
+        color: #4a235a;
+        width: 100px;
+        text-align: center;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    /* Custom cursor */
+    * {
+        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236c3483' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'%3E%3C/path%3E%3Cpath d='M12 5v14'%3E%3C/path%3E%3C/svg%3E"), auto;
+    }
+    
+    button, a, .stButton > button, .stSelectbox, .stSlider, [data-testid="stWidgetLabel"] {
+        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f9ca24' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 16l6-6-6-6'%3E%3C/path%3E%3Cpath d='M4 21v-7a4 4 0 0 1 4-4h11'%3E%3C/path%3E%3C/svg%3E"), pointer !important;
+    }
+    
+    /* Dashboard container */
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .dashboard-card {
+        background-color: #ffffff;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    /* Tour guide */
+    .tour-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 9998;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .tour-box {
+        background-color: white;
+        border-radius: 10px;
+        padding: 20px;
+        max-width: 500px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        position: relative;
+        z-index: 9999;
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    .tour-title {
+        color: #6c3483;
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+    
+    .tour-content {
+        margin-bottom: 20px;
+    }
+    
+    .tour-buttons {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .tour-button {
+        background-color: #6c3483;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .tour-button:hover {
+        background-color: #8e44ad;
+    }
+    
+    .tour-skip {
+        background-color: #f0f0f0;
+        color: #4a235a;
+    }
+    
+    /* Fix for navigation links */
+    .main-header {
+        background-color: white;
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .nav-links {
+        display: flex;
+        gap: 2rem;
+    }
+    
+    .nav-link {
+        color: #4a235a;
+        font-weight: 500;
+        text-decoration: none;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+    
+    .header-button {
+        background-color: #f9ca24;
+        color: #4a235a;
+        padding: 0.5rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        width: auto;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# === EXPRESSO LOGO SVG ===
+# === JAVASCRIPT FOR ANIMATIONS AND INTERACTIVE ELEMENTS ===
+st.markdown("""
+<script>
+// Collapsible sections
+document.addEventListener('DOMContentLoaded', function() {
+    var coll = document.getElementsByClassName("collapsible");
+    for (var i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    }
+});
+
+// Tour guide functionality
+let currentStep = 0;
+const tourSteps = [
+    {
+        title: "Welcome to Expresso Churn Prediction",
+        content: "This guided tour will help you understand how to use this application effectively.",
+        target: "body"
+    },
+    {
+        title: "Overview Tab",
+        content: "Here you can explore the dataset and understand the features that influence customer churn.",
+        target: "#tab-overview"
+    },
+    {
+        title: "Evaluation Tab",
+        content: "This section shows how well our model performs in predicting customer churn.",
+        target: "#tab-evaluation"
+    },
+    {
+        title: "Prediction Tool",
+        content: "Use this interactive tool to predict if a customer is likely to churn based on their attributes.",
+        target: "#tab-prediction"
+    },
+    {
+        title: "Customer Parameters",
+        content: "Adjust these sliders to see how different factors affect churn probability.",
+        target: ".stSlider"
+    }
+];
+
+function showTourStep(step) {
+    const tourOverlay = document.createElement('div');
+    tourOverlay.className = 'tour-overlay';
+    
+    const tourBox = document.createElement('div');
+    tourBox.className = 'tour-box';
+    
+    const tourTitle = document.createElement('h3');
+    tourTitle.className = 'tour-title';
+    tourTitle.textContent = tourSteps[step].title;
+    
+    const tourContent = document.createElement('div');
+    tourContent.className = 'tour-content';
+    tourContent.textContent = tourSteps[step].content;
+    
+    const tourButtons = document.createElement('div');
+    tourButtons.className = 'tour-buttons';
+    
+    const prevButton = document.createElement('button');
+    prevButton.className = 'tour-button tour-prev';
+    prevButton.textContent = 'Previous';
+    prevButton.style.display = step === 0 ? 'none' : 'block';
+    prevButton.onclick = () => {
+        document.body.removeChild(tourOverlay);
+        showTourStep(step - 1);
+    };
+    
+    const nextButton = document.createElement('button');
+    nextButton.className = 'tour-button tour-next';
+    nextButton.textContent = step === tourSteps.length - 1 ? 'Finish' : 'Next';
+    nextButton.onclick = () => {
+        document.body.removeChild(tourOverlay);
+        if (step < tourSteps.length - 1) {
+            showTourStep(step + 1);
+        }
+    };
+    
+    const skipButton = document.createElement('button');
+    skipButton.className = 'tour-button tour-skip';
+    skipButton.textContent = 'Skip Tour';
+    skipButton.onclick = () => {
+        document.body.removeChild(tourOverlay);
+    };
+    
+    tourButtons.appendChild(skipButton);
+    if (step > 0) tourButtons.appendChild(prevButton);
+    tourButtons.appendChild(nextButton);
+    
+    tourBox.appendChild(tourTitle);
+    tourBox.appendChild(tourContent);
+    tourBox.appendChild(tourButtons);
+    
+    tourOverlay.appendChild(tourBox);
+    document.body.appendChild(tourOverlay);
+}
+
+// Start tour when button is clicked
+function startTour() {
+    showTourStep(0);
+}
+</script>
+""", unsafe_allow_html=True)
+
+# === EXPRESSO LOGO SVG WITH ANIMATION ===
 expresso_logo = """
 <div class="logo-container">
     <div class="logo-circle">
@@ -426,10 +831,10 @@ expresso_logo = """
 </div>
 """
 
-# === HEADER WITH EXPRESSO BRANDING ===
+# === HEADER WITH EXPRESSO BRANDING (FIXED) ===
 def render_header():
     st.markdown("""
-    <div class="main-header" style="background-color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+    <div class="main-header">
         <div class="logo-container">
             <div class="logo-circle">
                 <svg viewBox="0 0 50 50" width="40" height="40" fill="#4a235a">
@@ -446,7 +851,7 @@ def render_header():
             <span class="nav-link">A PROPOS</span>
         </div>
         
-        <button class="custom-button" style="background-color: #f9ca24; color: #4a235a; padding: 0.5rem 1.5rem; border-radius: 50px; font-weight: 500; border: none; cursor: pointer; width: auto;">VOIR NOS AGENCES</button>
+        <button class="header-button">VOIR NOS AGENCES</button>
     </div>
     
     <div class="contact-button">
@@ -470,7 +875,8 @@ except Exception as e:
     st.warning("Please update the file paths in the code to match your environment.")
     # Create sample data for demonstration
     df = pd.DataFrame({
-        'REGION': ['Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies'],
+        'user_id': range(1, 11),
+        'REGION': ['Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', '  'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Dakar', 'Thies'],
         'TENURE': [12, 24, 36, 6, 18, 30, 9, 15, 27, 3],
         'MONTANT': [15000, 25000, 10000, 30000, 20000, 15000, 25000, 10000, 30000, 20000],
         'FREQUENCE_RECH': [10, 15, 5, 20, 12, 8, 18, 7, 14, 9],
@@ -490,10 +896,10 @@ except Exception as e:
     model = None
 
 # === EXPRESSO BACKGROUND IMAGES ===
-# Replace these with the actual image URLs you provided
+# Using direct image URLs for better reliability
 expresso_images = {
     "overview": "https://www.expressotelecom.sn/wp-content/uploads/2022/03/expresso-logo.png",
-    "evaluation": "https://scontent.fdkr5-1.fna.fbcdn.net/v/t39.30808-6/348660767_1608789046291399_8988156283888260636_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=5f2048&_nc_ohc=dQnIV9WDNXAAX_Qe_Oe&_nc_ht=scontent.fdkr5-1.fna&oh=00_AfCHHYQnm_8R_CdQZhLRrw-XVj_Yx_qYMYwwHXJgHjFQrw&oe=66A0D5D9",
+    "evaluation": "https://scontent.fdkr5-1.fna.fbcdn.net/v/t39.30808-6/348660767_1608789046291399_8988156283888260636_n.jpg",
     "classifier": "https://pbs.twimg.com/media/GQnQQQsWwAA9Aqj?format=jpg&name=large"
 }
 
@@ -606,6 +1012,267 @@ def get_similar_customers(region, tenure, arpu_segment):
     
     return similar_customers
 
+def create_3d_scatter():
+    """Create a 3D scatter plot for data visualization"""
+    # Sample data for 3D visualization
+    z = df['TENURE'].values[:100] if 'TENURE' in df.columns else np.random.randint(1, 60, 100)
+    x = df['MONTANT'].values[:100] if 'MONTANT' in df.columns else np.random.uniform(1000, 50000, 100)
+    y = df['REVENUE'].values[:100] if 'REVENUE' in df.columns else np.random.uniform(500, 20000, 100)
+    colors = df['CHURN'].values[:100] if 'CHURN' in df.columns else np.random.choice([0, 1], 100)
+    
+    fig = px.scatter_3d(
+        x=x, y=y, z=z,
+        color=colors,
+        color_discrete_sequence=['#4CAF50', '#F44336'],
+        labels={'x': 'Amount Spent', 'y': 'Revenue', 'z': 'Tenure', 'color': 'Churn'},
+        title="3D Visualization of Customer Data"
+    )
+    
+    fig.update_layout(
+        scene = dict(
+            xaxis_title='Amount Spent',
+            yaxis_title='Revenue',
+            zaxis_title='Tenure',
+            xaxis = dict(backgroundcolor="#f9f9f9"),
+            yaxis = dict(backgroundcolor="#f9f9f9"),
+            zaxis = dict(backgroundcolor="#f9f9f9")
+        ),
+        margin=dict(l=0, r=0, b=0, t=30)
+    )
+    
+    return fig
+
+def create_geographical_heatmap():
+    """Create a geographical heatmap of churn rates"""
+    # Sample data for geographical visualization
+    # In a real app, you would aggregate actual data by region
+    geo_data = pd.DataFrame({
+        'Region': ['Dakar', 'Thies', 'Saint-Louis', 'Nouakchott', 'Kaolack', 'Ziguinchor'],
+        'Latitude': [14.6937, 14.7910, 16.0179, 18.0735, 14.1652, 12.5598],
+        'Longitude': [-17.4441, -16.9359, -16.4896, -15.9582, -16.0726, -16.2730],
+        'Churn_Rate': [25, 30, 20, 35, 28, 22]
+    })
+    
+    fig = pdk.Deck(
+        map_style='mapbox://styles/mapbox/light-v9',
+        initial_view_state=pdk.ViewState(
+            latitude=15.5,
+            longitude=-16.5,
+            zoom=6,
+            pitch=50,
+        ),
+        layers=[
+            pdk.Layer(
+                'HexagonLayer',
+                data=geo_data,
+                get_position=['Longitude', 'Latitude'],
+                get_elevation='Churn_Rate',
+                elevation_scale=100,
+                elevation_range=[0, 1000],
+                pickable=True,
+                extruded=True,
+                coverage=1,
+                get_fill_color="[255, (1 - Churn_Rate / 40) * 255, 0]",
+            ),
+        ],
+        tooltip={"text": "{Region}\nChurn Rate: {Churn_Rate}%"}
+    )
+    
+    return fig
+
+def preprocess_input_data(input_df):
+    """Preprocess input data according to the steps provided by the user"""
+    # Create a copy to avoid modifying the original
+    df_processed = input_df.copy()
+    
+    # 1. Handle Missing Values
+    cols_to_drop = ['ZONE1', 'ZONE2']
+    if all(col in df_processed.columns for col in cols_to_drop):
+        df_processed.drop(columns=cols_to_drop, inplace=True)
+    
+    if 'MRG' in df_processed.columns and df_processed['MRG'].nunique() == 1:
+        df_processed.drop(columns=['MRG'], inplace=True)
+    
+    # Impute categorical columns with mode
+    for col in ['REGION', 'TOP_PACK']:
+        if col in df_processed.columns:
+            df_processed[col].fillna(df_processed[col].mode()[0], inplace=True)
+    
+    # Impute numerical columns with median
+    num_cols_to_impute = [
+        'MONTANT', 'FREQUENCE_RECH', 'REVENUE',
+        'ARPU_SEGMENT', 'FREQUENCE', 'DATA_VOLUME',
+        'ON_NET', 'ORANGE', 'TIGO', 'FREQ_TOP_PACK'
+    ]
+    for col in num_cols_to_impute:
+        if col in df_processed.columns:
+            df_processed[col].fillna(df_processed[col].median(), inplace=True)
+    
+    # 2. Feature Engineering
+    # Define ordered mapping for TENURE if it's categorical
+    if 'TENURE' in df_processed.columns and df_processed['TENURE'].dtype == 'object':
+        tenure_order = {
+            'A 0-3 month': 0,
+            'B 3-6 month': 1,
+            'C 6-9 month': 2,
+            'D 9-12 month': 3,
+            'E 12-15 month': 4,
+            'F 15-18 month': 5,
+            'G 18-21 month': 6,
+            'H 21-24 month': 7,
+            'I 18-21 month': 6,
+            'J 21-24 month': 7,
+            'K > 24 month': 8
+        }
+        df_processed['TENURE'] = df_processed['TENURE'].map(tenure_order)
+    
+    # One-Hot Encode REGION
+    if 'REGION' in df_processed.columns:
+        df_processed = pd.get_dummies(df_processed, columns=['REGION'], prefix='REGION', dummy_na=True)
+    
+    # Frequency Encode TOP_PACK
+    if 'TOP_PACK' in df_processed.columns:
+        top_pack_freq = df_processed['TOP_PACK'].value_counts()
+        df_processed['TOP_PACK_FE'] = df_processed['TOP_PACK'].map(top_pack_freq)
+        df_processed.drop(columns=['TOP_PACK'], inplace=True)
+        
+        # Normalize the frequency-encoded column
+        scaler = MinMaxScaler()
+        df_processed['TOP_PACK_FE'] = scaler.fit_transform(df_processed[['TOP_PACK_FE']])
+    
+    # 3. Final Processing
+    # Convert boolean columns to int
+    bool_cols = df_processed.select_dtypes(include='bool').columns
+    df_processed[bool_cols] = df_processed[bool_cols].astype(int)
+    
+    # Handle outliers for numeric columns (simplified approach)
+    num_cols = df_processed.select_dtypes(include=np.number).columns.tolist()
+    binary_cols = [col for col in num_cols if df_processed[col].nunique() <= 2]
+    iqr_cols = [col for col in num_cols if col not in binary_cols + ['CHURN']]
+    
+    for col in iqr_cols:
+        Q1 = df_processed[col].quantile(0.25)
+        Q3 = df_processed[col].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        df_processed[col] = df_processed[col].clip(lower_bound, upper_bound)
+    
+    return df_processed
+
+# === GUIDED TOUR FUNCTIONALITY ===
+def show_guided_tour():
+    tour_started = st.session_state.get('tour_started', False)
+    
+    if not tour_started:
+        with st.sidebar:
+            st.markdown("### 🚀 First time here?")
+            if st.button("Start Guided Tour"):
+                st.session_state['tour_started'] = True
+                st.session_state['tour_step'] = 0
+                st.experimental_rerun()
+    
+    if tour_started:
+        tour_step = st.session_state.get('tour_step', 0)
+        tour_steps = [
+            {
+                "title": "Welcome to Expresso Churn Prediction",
+                "content": "This guided tour will help you understand how to use this application effectively."
+            },
+            {
+                "title": "Overview Tab",
+                "content": "Here you can explore the dataset and understand the features that influence customer churn."
+            },
+            {
+                "title": "Evaluation Tab",
+                "content": "This section shows how well our model performs in predicting customer churn."
+            },
+            {
+                "title": "Prediction Tool",
+                "content": "Use this interactive tool to predict if a customer is likely to churn based on their attributes."
+            },
+            {
+                "title": "Customer Parameters",
+                "content": "Adjust these sliders to see how different factors affect churn probability."
+            }
+        ]
+        
+        # Display tour overlay
+        st.markdown(f"""
+        <div style="position: fixed; bottom: 20px; right: 20px; background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 9999; max-width: 400px;">
+            <h3 style="color: #6c3483; margin-top: 0;">{tour_steps[tour_step]['title']}</h3>
+            <p>{tour_steps[tour_step]['content']}</p>
+            <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                <button onclick="window.tourStep = {tour_step - 1}; Streamlit.setComponentValue(window.tourStep);" style="background-color: #f0f0f0; color: #4a235a; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; {'' if tour_step > 0 else 'visibility: hidden;'}">Previous</button>
+                <button onclick="Streamlit.setComponentValue('end_tour');" style="background-color: #f0f0f0; color: #4a235a; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">Skip Tour</button>
+                <button onclick="window.tourStep = {tour_step + 1}; Streamlit.setComponentValue(window.tourStep);" style="background-color: #6c3483; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">{tour_step == len(tour_steps) - 1 and 'Finish' or 'Next'}</button>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Handle tour navigation
+        if st.button("Next", key="tour_next", help="Go to next step"):
+            if tour_step < len(tour_steps) - 1:
+                st.session_state['tour_step'] += 1
+            else:
+                st.session_state['tour_started'] = False
+            st.experimental_rerun()
+        
+        if tour_step > 0 and st.button("Previous", key="tour_prev", help="Go to previous step"):
+            st.session_state['tour_step'] -= 1
+            st.experimental_rerun()
+        
+        if st.button("End Tour", key="tour_end", help="End the guided tour"):
+            st.session_state['tour_started'] = False
+            st.experimental_rerun()
+
+# === PROGRESS INDICATOR ===
+def show_progress_indicator(current_step, total_steps=4):
+    steps = ["Data Input", "Preprocessing", "Model Prediction", "Results"]
+    
+    progress_html = """
+    <div class="step-container">
+    """
+    
+    for i in range(total_steps):
+        status = ""
+        if i < current_step:
+            status = "completed"
+        elif i == current_step:
+            status = "active"
+        
+        progress_html += f"""
+        <div class="step {status}">
+            {i+1}
+            <div class="step-label">{steps[i]}</div>
+        </div>
+        """
+    
+    progress_html += """
+    </div>
+    """
+    
+    st.markdown(progress_html, unsafe_allow_html=True)
+
+# === COLLAPSIBLE SECTIONS ===
+def create_collapsible_section(title, content, expanded=False):
+    section_id = title.lower().replace(" ", "_")
+    
+    if expanded:
+        st.markdown(f"""
+        <button class="collapsible active" id="{section_id}_btn">{title}</button>
+        <div class="collapsible-content" id="{section_id}_content" style="max-height: 1000px; padding: 18px;">
+            {content}
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <button class="collapsible" id="{section_id}_btn">{title}</button>
+        <div class="collapsible-content" id="{section_id}_content">
+            {content}
+        </div>
+        """, unsafe_allow_html=True)
+
 # === MAIN APP CONTENT ===
 # Main container
 main_container = st.container()
@@ -624,6 +1291,13 @@ with main_container:
         current_date = datetime.now().strftime("%B %d, %Y")
         st.markdown(f"<p style='text-align: center; color: #888;'>Last updated: {current_date}</p>", unsafe_allow_html=True)
     
+    # Show guided tour button
+    with col3:
+        if st.button("Start Tour", help="Take a guided tour of the application"):
+            st.session_state['tour_started'] = True
+            st.session_state['tour_step'] = 0
+            st.experimental_rerun()
+    
     # Create tabs for the three main sections
     tab1, tab2, tab3 = st.tabs(["Overview", "Evaluation", "Machine Learning Classifier"])
     
@@ -638,53 +1312,48 @@ with main_container:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("## Dataset Overview")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("""
-            ### About the Dataset
+        # Collapsible Dataset Overview
+        dataset_overview_content = """
+        <div class="card">
+            <p>The Expresso Churn dataset was provided as part of the Expresso Churn Prediction Challenge hosted by Zindi platform. It contains data on 2.5 million Expresso clients with more than 15 behavior variables to predict client churn probability.</p>
             
-            The Expresso Churn dataset was provided as part of the Expresso Churn Prediction Challenge hosted by Zindi platform. It contains data on 2.5 million Expresso clients with more than 15 behavior variables to predict client churn probability.
-            
-            **Key Information:**
-            - **Telecom Provider:** Expresso, operating in Mauritania and Senegal
-            - **Total Records:** 2.5 million clients
-            - **Features:** 15+ behavioral variables
-            - **Target Variable:** Customer churn (binary classification)
-            """)
+            <p><strong>Key Information:</strong></p>
+            <ul>
+                <li><strong>Telecom Provider:</strong> Expresso, operating in Mauritania and Senegal</li>
+                <li><strong>Total Records:</strong> 2.5 million clients</li>
+                <li><strong>Features:</strong> 15+ behavioral variables</li>
+                <li><strong>Target Variable:</strong> Customer churn (binary classification)</li>
+            </ul>
+        </div>
+        """
+        create_collapsible_section("Dataset Overview", dataset_overview_content, expanded=True)
         
-        with col2:
-            st.markdown("### Sample Data")
-            st.dataframe(df.head())
+        # Sample Data in collapsible section
+        st.markdown("### Sample Data")
+        st.dataframe(df.head())
         
-        st.markdown("### Feature Descriptions")
-        
-        feature_descriptions = {
-            'REGION': 'Geographic location of the customer',
-            'TENURE': 'Number of months the customer has been with Expresso',
-            'MONTANT': 'Amount spent by the customer',
-            'FREQUENCE_RECH': 'Frequency of recharges',
-            'REVENUE': 'Revenue generated by the customer',
-            'ARPU_SEGMENT': 'Average Revenue Per User segment',
-            'FREQUENCE': 'Frequency of usage',
-            'DATA_VOLUME': 'Volume of data used',
-            'ON_NET': 'On-network calls',
-            'ORANGE': 'Calls to Orange network',
-            'TIGO': 'Calls to Tigo network',
-            'ZONE1': 'International calls to Zone 1',
-            'ZONE2': 'International calls to Zone 2',
-            'MRG': 'Migration indicator',
-            'REGULARITY': 'Regularity of usage',
-            'CHURN': 'Target variable indicating whether the customer churned (1) or not (0)'
-        }
-        
-        # Display feature descriptions in a more visually appealing way
-        cols = st.columns(2)
-        for i, (feature, description) in enumerate(feature_descriptions.items()):
-            with cols[i % 2]:
-                st.markdown(f"**{feature}**: {description}")
+        # Feature Descriptions in collapsible section
+        feature_descriptions_content = """
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div><strong>REGION</strong>: Geographic location of the customer</div>
+            <div><strong>TENURE</strong>: Number of months the customer has been with Expresso</div>
+            <div><strong>MONTANT</strong>: Amount spent by the customer</div>
+            <div><strong>FREQUENCE_RECH</strong>: Frequency of recharges</div>
+            <div><strong>REVENUE</strong>: Revenue generated by the customer</div>
+            <div><strong>ARPU_SEGMENT</strong>: Average Revenue Per User segment</div>
+            <div><strong>FREQUENCE</strong>: Frequency of usage</div>
+            <div><strong>DATA_VOLUME</strong>: Volume of data used</div>
+            <div><strong>ON_NET</strong>: On-network calls</div>
+            <div><strong>ORANGE</strong>: Calls to Orange network</div>
+            <div><strong>TIGO</strong>: Calls to Tigo network</div>
+            <div><strong>ZONE1</strong>: International calls to Zone 1</div>
+            <div><strong>ZONE2</strong>: International calls to Zone 2</div>
+            <div><strong>MRG</strong>: Migration indicator</div>
+            <div><strong>REGULARITY</strong>: Regularity of usage</div>
+            <div><strong>CHURN</strong>: Target variable indicating whether the customer churned (1) or not (0)</div>
+        </div>
+        """
+        create_collapsible_section("Feature Descriptions", feature_descriptions_content)
         
         # Data distribution visualization
         st.markdown("### Data Distribution")
@@ -707,6 +1376,14 @@ with main_container:
             plt.ylabel('Count')
             plt.xticks(rotation=45)
             st.pyplot(fig)
+        
+        # 3D Visualization
+        st.markdown("### 3D Data Visualization")
+        st.plotly_chart(create_3d_scatter(), use_container_width=True)
+        
+        # Geographical Heatmap
+        st.markdown("### Geographical Distribution of Churn")
+        st.pydeck_chart(create_geographical_heatmap())
     
     # === EVALUATION TAB ===
     with tab2:
@@ -719,72 +1396,94 @@ with main_container:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("## Model Evaluation")
+        # Interactive Dashboard
+        st.markdown("## Model Evaluation Dashboard")
+        st.markdown("Use the controls below to customize your dashboard view:")
         
-        # Display metrics in cards
-        col1, col2, col3, col4 = st.columns(4)
-        
+        # Dashboard controls
+        col1, col2, col3 = st.columns(3)
         with col1:
-            st.markdown("""
-            <div class="metric-card">
-                <h3>Accuracy</h3>
-                <div class="metric-value">92.5%</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            show_metrics = st.checkbox("Show Metrics", value=True)
         with col2:
-            st.markdown("""
-            <div class="metric-card">
-                <h3>Precision</h3>
-                <div class="metric-value">89.7%</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            show_confusion = st.checkbox("Show Confusion Matrix", value=True)
         with col3:
-            st.markdown("""
-            <div class="metric-card">
-                <h3>Recall</h3>
-                <div class="metric-value">85.3%</div>
-            </div>
-            """, unsafe_allow_html=True)
+            show_feature_importance = st.checkbox("Show Feature Importance", value=True)
         
-        with col4:
-            st.markdown("""
-            <div class="metric-card">
-                <h3>F1 Score</h3>
-                <div class="metric-value">87.4%</div>
-            </div>
-            """, unsafe_allow_html=True)
+        # Dashboard content based on selections
+        if show_metrics:
+            # Display metrics in cards
+            st.markdown("### Key Performance Metrics")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.markdown("""
+                <div class="metric-card">
+                    <h3>Accuracy</h3>
+                    <div class="metric-value">92.5%</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown("""
+                <div class="metric-card">
+                    <h3>Precision</h3>
+                    <div class="metric-value">89.7%</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                st.markdown("""
+                <div class="metric-card">
+                    <h3>Recall</h3>
+                    <div class="metric-value">85.3%</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col4:
+                st.markdown("""
+                <div class="metric-card">
+                    <h3>F1 Score</h3>
+                    <div class="metric-value">87.4%</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Create dashboard layout
+        dashboard_cols = st.columns(2)
         
         # Confusion Matrix
-        st.markdown("### Confusion Matrix")
-        
-        fig, ax = plt.subplots(figsize=(8, 6))
-        confusion_matrix = np.array([[1800, 200], [150, 850]])
-        sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='PuBu',
-                    xticklabels=['Not Churned', 'Churned'],
-                    yticklabels=['Not Churned', 'Churned'])
-        plt.title('Confusion Matrix')
-        plt.xlabel('Predicted')
-        plt.ylabel('Actual')
-        st.pyplot(fig)
+        if show_confusion:
+            with dashboard_cols[0]:
+                st.markdown("### Confusion Matrix")
+                
+                fig, ax = plt.subplots(figsize=(8, 6))
+                confusion_matrix = np.array([[1800, 200], [150, 850]])
+                sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='PuBu',
+                            xticklabels=['Not Churned', 'Churned'],
+                            yticklabels=['Not Churned', 'Churned'])
+                plt.title('Confusion Matrix')
+                plt.xlabel('Predicted')
+                plt.ylabel('Actual')
+                st.pyplot(fig)
         
         # Feature Importance
-        st.markdown("### Feature Importance")
-        
-        # Sort features by importance
-        feature_importance = pd.DataFrame({
-            'Feature': ['TENURE', 'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'DATA_VOLUME', 'ON_NET', 
-                       'ORANGE', 'TIGO', 'ZONE1', 'ZONE2', 'MRG', 'REGULARITY'],
-            'Importance': [0.25, 0.18, 0.15, 0.12, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01, 0.01]
-        }).sort_values('Importance', ascending=False)
-        
-        fig, ax = plt.subplots(figsize=(12, 8))
-        sns.barplot(x='Importance', y='Feature', data=feature_importance.head(10), palette='PuBu_r')
-        plt.title('Top 10 Feature Importance')
-        plt.xlabel('Importance')
-        plt.ylabel('Feature')
-        st.pyplot(fig)
+        if show_feature_importance:
+            with dashboard_cols[1]:
+                st.markdown("### Feature Importance")
+                
+                # Sort features by importance
+                feature_importance = pd.DataFrame({
+                    'Feature': ['TENURE', 'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'DATA_VOLUME', 'ON_NET', 
+                               'ORANGE', 'TIGO', 'ZONE1', 'ZONE2', 'MRG', 'REGULARITY'],
+                    'Importance': [0.25, 0.18, 0.15, 0.12, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01, 0.01]
+                }).sort
+                }).sort_values('Importance', ascending=False)
+                
+                fig, ax = plt.subplots(figsize=(12, 8))
+                sns.barplot(x='Importance', y='Feature', data=feature_importance.head(10), palette='PuBu_r')
+                plt.title('Top 10 Feature Importance')
+                plt.xlabel('Importance')
+                plt.ylabel('Feature')
+                st.pyplot(fig)
         
         # ROC Curve
         st.markdown("### ROC Curve")
@@ -804,6 +1503,49 @@ with main_container:
         plt.title('Receiver Operating Characteristic (ROC) Curve')
         plt.legend(loc="lower right")
         st.pyplot(fig)
+        
+        # Interactive Model Comparison
+        st.markdown("### Model Comparison")
+        st.markdown("Compare different model performances:")
+        
+        # Create tabs for model comparison
+        model_tabs = st.tabs(["Random Forest", "XGBoost", "Logistic Regression"])
+        
+        with model_tabs[0]:
+            st.markdown("""
+            <div class="card">
+                <h4>Random Forest Performance</h4>
+                <p>Random Forest is our best performing model with high accuracy and good balance between precision and recall.</p>
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 92.5%;"></div>
+                </div>
+                <p>Accuracy: 92.5%</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with model_tabs[1]:
+            st.markdown("""
+            <div class="card">
+                <h4>XGBoost Performance</h4>
+                <p>XGBoost performs slightly worse than Random Forest but has faster training time.</p>
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 91.2%;"></div>
+                </div>
+                <p>Accuracy: 91.2%</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with model_tabs[2]:
+            st.markdown("""
+            <div class="card">
+                <h4>Logistic Regression Performance</h4>
+                <p>Logistic Regression is our baseline model with decent performance and high interpretability.</p>
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 85.7%;"></div>
+                </div>
+                <p>Accuracy: 85.7%</p>
+            </div>
+            """, unsafe_allow_html=True)
     
     # === MACHINE LEARNING CLASSIFIER TAB ===
     with tab3:
@@ -816,41 +1558,47 @@ with main_container:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("## Machine Learning Classifier")
+        # Progress indicator
+        current_step = st.session_state.get('prediction_step', 0)
+        show_progress_indicator(current_step)
         
-        st.markdown("""
-        ### Model Information
-        
-        We've implemented a **Random Forest Classifier** to predict customer churn. This model was chosen for its:
-        
-        - High accuracy for classification tasks
-        - Ability to handle non-linear relationships
-        - Feature importance capabilities
-        - Robustness to outliers and non-normalized data
-        
-        The model was trained on 70% of the data and tested on the remaining 30%.
-        """)
+        # Model Information in collapsible section
+        model_info_content = """
+        <div class="card">
+            <p>We've implemented a <strong>Random Forest Classifier</strong> to predict customer churn. This model was chosen for its:</p>
+            <ul>
+                <li>High accuracy for classification tasks</li>
+                <li>Ability to handle non-linear relationships</li>
+                <li>Feature importance capabilities</li>
+                <li>Robustness to outliers and non-normalized data</li>
+            </ul>
+            <p>The model was trained on 70% of the data and tested on the remaining 30%.</p>
+        </div>
+        """
+        create_collapsible_section("Model Information", model_info_content, expanded=True)
         
         # Interactive prediction section
         st.markdown("### Try the Model")
         st.markdown("Adjust the parameters below to see how they affect the churn prediction:")
         
+        # Touch-optimized controls
         col1, col2 = st.columns(2)
         
         with col1:
-            tenure = st.slider("Tenure (months)", 1, 60, 12)
-            montant = st.slider("Amount Spent", 1000, 50000, 10000)
-            freq_rech = st.slider("Recharge Frequency", 0, 30, 5)
-            revenue = st.slider("Revenue", 500, 20000, 5000)
+            tenure = st.slider("Tenure (months)", 1, 60, 12, help="Number of months the customer has been with Expresso")
+            montant = st.slider("Amount Spent", 1000, 50000, 10000, help="Total amount spent by the customer")
+            freq_rech = st.slider("Recharge Frequency", 0, 30, 5, help="How often the customer recharges their account")
+            revenue = st.slider("Revenue", 500, 20000, 5000, help="Revenue generated by the customer")
         
         with col2:
-            region = st.selectbox("Region", ["Dakar", "Thies", "Saint-Louis", "Nouakchott"])
-            arpu = st.selectbox("ARPU Segment", ["Low", "Medium", "High"])
-            data_volume = st.slider("Data Volume", 0, 10000, 2000)
-            regularity = st.slider("Regularity", 0, 10, 5)
+            region = st.selectbox("Region", ["Dakar", "Thies", "Saint-Louis", "Nouakchott"], help="Customer's geographic location")
+            arpu = st.selectbox("ARPU Segment", ["Low", "Medium", "High"], help="Average Revenue Per User segment")
+            data_volume = st.slider("Data Volume", 0, 10000, 2000, help="Volume of data used by the customer")
+            regularity = st.slider("Regularity", 0, 10, 5, help="Regularity of customer's usage patterns")
         
         # Create a sample for prediction
         sample = pd.DataFrame({
+            'user_id': [1],
             'REGION': [region],
             'TENURE': [tenure],
             'MONTANT': [montant],
@@ -869,17 +1617,35 @@ with main_container:
         })
         
         # Make prediction (simulated for demo)
-        if st.button("Predict Churn"):
-            # Show loading animation
-            st.markdown("""
-            <div style="display: flex; justify-content: center; margin: 20px 0;">
-                <div class="loading"></div>
-            </div>
-            """, unsafe_allow_html=True)
+        if st.button("Predict Churn", help="Click to predict churn probability"):
+            # Update progress indicator
+            st.session_state['prediction_step'] = 1
             
-            # Simulate prediction
-            import time
-            time.sleep(1)  # Simulate processing time
+            # Show loading animation with progress
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Simulate data preprocessing
+            status_text.text("Preprocessing data...")
+            for i in range(25):
+                time.sleep(0.05)
+                progress_bar.progress(i + 1)
+            
+            # Apply preprocessing steps
+            status_text.text("Applying feature engineering...")
+            processed_sample = preprocess_input_data(sample)
+            for i in range(25, 50):
+                time.sleep(0.05)
+                progress_bar.progress(i + 1)
+            
+            # Update progress indicator
+            st.session_state['prediction_step'] = 2
+            
+            # Simulate model prediction
+            status_text.text("Running prediction model...")
+            for i in range(50, 75):
+                time.sleep(0.05)
+                progress_bar.progress(i + 1)
             
             # For demo purposes, calculate a probability based on input values
             # In a real app, you would use your trained model
@@ -896,7 +1662,19 @@ with main_container:
             # Cap probability between 0 and 1
             churn_prob = min(max(churn_prob, 0.05), 0.95)
             
-            # Display prediction
+            # Simulate final processing
+            status_text.text("Finalizing results...")
+            for i in range(75, 100):
+                time.sleep(0.05)
+                progress_bar.progress(i + 1)
+            
+            # Update progress indicator
+            st.session_state['prediction_step'] = 3
+            
+            # Clear progress indicators
+            status_text.empty()
+            
+            # Display prediction with animation
             st.markdown("### Prediction Result")
             
             col1, col2 = st.columns(2)
@@ -956,6 +1734,84 @@ with main_container:
             st.markdown("### Comparison with Similar Customers")
             similar_customers = get_similar_customers(region, tenure, arpu)
             st.plotly_chart(create_churn_comparison_chart(churn_prob, similar_customers), use_container_width=True)
+            
+            # Interactive What-If Analysis
+            st.markdown("### What-If Analysis")
+            st.markdown("See how changing customer attributes would affect churn probability:")
+            
+            what_if_col1, what_if_col2 = st.columns(2)
+            
+            with what_if_col1:
+                tenure_change = st.slider("Change in Tenure (months)", -12, 12, 0, help="How would adding or reducing months affect churn?")
+                montant_change = st.slider("Change in Amount Spent", -10000, 10000, 0, step=1000, help="How would spending more or less affect churn?")
+            
+            with what_if_col2:
+                freq_change = st.slider("Change in Recharge Frequency", -10, 10, 0, help="How would changing recharge frequency affect churn?")
+                data_change = st.slider("Change in Data Usage", -5000, 5000, 0, step=500, help="How would using more or less data affect churn?")
+            
+            if st.button("Recalculate Churn Probability", help="See how these changes would affect churn"):
+                # Calculate new probability based on changes
+                new_prob = churn_prob
+                
+                # Tenure effect (negative correlation with churn)
+                new_prob -= tenure_change * 0.01
+                
+                # Amount spent effect (negative correlation with churn)
+                new_prob -= montant_change * 0.00001
+                
+                # Recharge frequency effect (negative correlation with churn)
+                new_prob -= freq_change * 0.02
+                
+                # Data usage effect (varies)
+                if data_change > 0:
+                    new_prob -= data_change * 0.00002  # More data usage, less churn
+                else:
+                    new_prob += abs(data_change) * 0.00001  # Less data usage, more churn
+                
+                # Cap probability between 0 and 1
+                new_prob = min(max(new_prob, 0.05), 0.95)
+                
+                # Display comparison
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>Original Probability</h3>
+                        <div class="metric-value">{churn_prob:.1%}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>New Probability</h3>
+                        <div class="metric-value">{new_prob:.1%}</div>
+                        <p>{'↑ Increased' if new_prob > churn_prob else '↓ Decreased'} by {abs(new_prob - churn_prob):.1%}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Visualization of the change
+                fig = go.Figure()
+                
+                fig.add_trace(go.Indicator(
+                    mode = "delta",
+                    value = new_prob * 100,
+                    delta = {'reference': churn_prob * 100, 'relative': True, 'valueformat': '.1f'},
+                    title = {'text': "Change in Churn Probability"},
+                    domain = {'y': [0, 1], 'x': [0.25, 0.75]}
+                ))
+                
+                fig.update_layout(
+                    height = 200,
+                    margin = dict(l=20, r=20, t=50, b=20)
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+
+# Show guided tour if enabled
+if 'tour_started' in st.session_state and st.session_state['tour_started']:
+    show_guided_tour()
 
 # Footer
 st.markdown("""

@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 
 # Load trained model and preprocessing objects
-model = joblib.load("logistic_regression_model.pkl")  # Either Random Forest or Logistic Regression
+model = joblib.load("logistic_regression_model.joblib")  # Either Random Forest or Logistic Regression
 scaler = joblib.load("scaler.joblib")
 imputer = joblib.load("imputer.joblib")
 features = joblib.load("feature_names.joblib")  # List of columns used during training

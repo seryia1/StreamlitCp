@@ -867,15 +867,21 @@ render_header()
 
 # === LOAD DATA AND MODEL ===
 
-import gdown
 
 
-url = 'https://drive.google.com/file/d/1ID5q6utffmHh7kTeXKbpcPftLWVt0j2v/view?usp=drive_link'
-output = 'data.csv'
-gdown.download(url, output, quiet=False)
 
-df = pd.read_csv(output)
-model = joblib.load("logistic_regression_model.joblib")
+url = 'https://www.dropbox.com/scl/fi/nyxsztvzq6391uof9gnlh/Expresso_churn_dataset.csv?rlkey=reo343zfzvvt8762ttapsirdd&e=1&st=xxagtwkr&raw=1'
+
+
+df1 = pd.read_csv(url)
+
+# Load trained model and preprocessing objects
+model = joblib.load("logistic_regression_model.joblib")  # Either Random Forest or Logistic Regression
+scaler = joblib.load("scaler.joblib")
+imputer = joblib.load("imputer.joblib")
+features = joblib.load("feature_names.joblib")  # List of columns used during training
+
+
 
 
 

@@ -1385,167 +1385,166 @@ with main_container:
         st.markdown("### Geographical Distribution of Churn")
         st.pydeck_chart(create_geographical_heatmap())
     
-    # === EVALUATION TAB ===
-    with tab2:
-        # Background image container
-        st.markdown(f"""
-        <div class="background-container">
-            <img src="{expresso_images['evaluation']}" class="background-image">
-            <h2><span class="yellow-accent">ici</span> c'est la précision qui décide</h2>
-            <p>Evaluating our churn prediction model with key performance metrics.</p>
+# === EVALUATION TAB ===
+with tab2:
+    # Background image container
+    st.markdown(f"""
+    <div class="background-container">
+        <img src="{expresso_images['evaluation']}" class="background-image">
+        <h2><span class="yellow-accent">ici</span> c'est la précision qui décide</h2>
+        <p>Evaluating our churn prediction model with key performance metrics.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Interactive Dashboard
+    st.markdown("## Model Evaluation Dashboard")
+    st.markdown("Use the controls below to customize your dashboard view:")
+    
+    # Dashboard controls
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        show_metrics = st.checkbox("Show Metrics", value=True)
+    with col2:
+        show_confusion = st.checkbox("Show Confusion Matrix", value=True)
+    with col3:
+        show_feature_importance = st.checkbox("Show Feature Importance", value=True)
+    
+    # Dashboard content based on selections
+    if show_metrics:
+        # Display metrics in cards
+        st.markdown("### Key Performance Metrics")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown("""
+            <div class="metric-card">
+                <h3>Accuracy</h3>
+                <div class="metric-value">92.5%</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div class="metric-card">
+                <h3>Precision</h3>
+                <div class="metric-value">89.7%</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("""
+            <div class="metric-card">
+                <h3>Recall</h3>
+                <div class="metric-value">85.3%</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            st.markdown("""
+            <div class="metric-card">
+                <h3>F1 Score</h3>
+                <div class="metric-value">87.4%</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Create dashboard layout
+    dashboard_cols = st.columns(2)
+    
+    # Confusion Matrix
+    if show_confusion:
+        with dashboard_cols[0]:
+            st.markdown("### Confusion Matrix")
+            
+            fig, ax = plt.subplots(figsize=(8, 6))
+            confusion_matrix = np.array([[1800, 200], [150, 850]])
+            sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='PuBu',
+                        xticklabels=['Not Churned', 'Churned'],
+                        yticklabels=['Not Churned', 'Churned'])
+            plt.title('Confusion Matrix')
+            plt.xlabel('Predicted')
+            plt.ylabel('Actual')
+            st.pyplot(fig)
+    
+    # Feature Importance
+    if show_feature_importance:
+        with dashboard_cols[1]:
+            st.markdown("### Feature Importance")
+            
+            # Sort features by importance
+            feature_importance = pd.DataFrame({
+                'Feature': ['TENURE', 'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'DATA_VOLUME', 'ON_NET', 
+                           'ORANGE', 'TIGO', 'ZONE1', 'ZONE2', 'MRG', 'REGULARITY'],
+                'Importance': [0.25, 0.18, 0.15, 0.12, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01, 0.01]
+            }).sort_values('Importance', ascending=False)
+            
+            fig, ax = plt.subplots(figsize=(12, 8))
+            sns.barplot(x='Importance', y='Feature', data=feature_importance.head(10), palette='PuBu_r')
+            plt.title('Top 10 Feature Importance')
+            plt.xlabel('Importance')
+            plt.ylabel('Feature')
+            st.pyplot(fig)
+    
+    # ROC Curve
+    st.markdown("### ROC Curve")
+    
+    # Sample ROC curve data
+    fpr = np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    tpr = np.array([0, 0.4, 0.65, 0.8, 0.88, 0.92, 0.95, 0.97, 0.985, 0.99, 1])
+    roc_auc = 0.91
+    
+    fig, ax = plt.subplots(figsize=(8, 6))
+    plt.plot(fpr, tpr, color='#6c3483', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+    plt.plot([0, 1], [0, 1], color='#f9ca24', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend(loc="lower right")
+    st.pyplot(fig)
+    
+    # Interactive Model Comparison
+    st.markdown("### Model Comparison")
+    st.markdown("Compare different model performances:")
+    
+    # Create tabs for model comparison
+    model_tabs = st.tabs(["Random Forest", "XGBoost", "Logistic Regression"])
+    
+    with model_tabs[0]:
+        st.markdown("""
+        <div class="card">
+            <h4>Random Forest Performance</h4>
+            <p>Random Forest is our best performing model with high accuracy and good balance between precision and recall.</p>
+            <div class="progress-container">
+                <div class="progress-bar" style="width: 92.5%;"></div>
+            </div>
+            <p>Accuracy: 92.5%</p>
         </div>
         """, unsafe_allow_html=True)
-        
-        # Interactive Dashboard
-        st.markdown("## Model Evaluation Dashboard")
-        st.markdown("Use the controls below to customize your dashboard view:")
-        
-        # Dashboard controls
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            show_metrics = st.checkbox("Show Metrics", value=True)
-        with col2:
-            show_confusion = st.checkbox("Show Confusion Matrix", value=True)
-        with col3:
-            show_feature_importance = st.checkbox("Show Feature Importance", value=True)
-        
-        # Dashboard content based on selections
-        if show_metrics:
-            # Display metrics in cards
-            st.markdown("### Key Performance Metrics")
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.markdown("""
-                <div class="metric-card">
-                    <h3>Accuracy</h3>
-                    <div class="metric-value">92.5%</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                st.markdown("""
-                <div class="metric-card">
-                    <h3>Precision</h3>
-                    <div class="metric-value">89.7%</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col3:
-                st.markdown("""
-                <div class="metric-card">
-                    <h3>Recall</h3>
-                    <div class="metric-value">85.3%</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col4:
-                st.markdown("""
-                <div class="metric-card">
-                    <h3>F1 Score</h3>
-                    <div class="metric-value">87.4%</div>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # Create dashboard layout
-        dashboard_cols = st.columns(2)
-        
-        # Confusion Matrix
-        if show_confusion:
-            with dashboard_cols[0]:
-                st.markdown("### Confusion Matrix")
-                
-                fig, ax = plt.subplots(figsize=(8, 6))
-                confusion_matrix = np.array([[1800, 200], [150, 850]])
-                sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='PuBu',
-                            xticklabels=['Not Churned', 'Churned'],
-                            yticklabels=['Not Churned', 'Churned'])
-                plt.title('Confusion Matrix')
-                plt.xlabel('Predicted')
-                plt.ylabel('Actual')
-                st.pyplot(fig)
-        
-        # Feature Importance
-        if show_feature_importance:
-            with dashboard_cols[1]:
-                st.markdown("### Feature Importance")
-                
-                # Sort features by importance
-                feature_importance = pd.DataFrame({
-                    'Feature': ['TENURE', 'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'DATA_VOLUME', 'ON_NET', 
-                               'ORANGE', 'TIGO', 'ZONE1', 'ZONE2', 'MRG', 'REGULARITY'],
-                    'Importance': [0.25, 0.18, 0.15, 0.12, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01, 0.01]
-                }).sort
-                }).sort_values('Importance', ascending=False)
-                
-                fig, ax = plt.subplots(figsize=(12, 8))
-                sns.barplot(x='Importance', y='Feature', data=feature_importance.head(10), palette='PuBu_r')
-                plt.title('Top 10 Feature Importance')
-                plt.xlabel('Importance')
-                plt.ylabel('Feature')
-                st.pyplot(fig)
-        
-        # ROC Curve
-        st.markdown("### ROC Curve")
-        
-        # Sample ROC curve data
-        fpr = np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
-        tpr = np.array([0, 0.4, 0.65, 0.8, 0.88, 0.92, 0.95, 0.97, 0.985, 0.99, 1])
-        roc_auc = 0.91
-        
-        fig, ax = plt.subplots(figsize=(8, 6))
-        plt.plot(fpr, tpr, color='#6c3483', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-        plt.plot([0, 1], [0, 1], color='#f9ca24', lw=2, linestyle='--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('Receiver Operating Characteristic (ROC) Curve')
-        plt.legend(loc="lower right")
-        st.pyplot(fig)
-        
-        # Interactive Model Comparison
-        st.markdown("### Model Comparison")
-        st.markdown("Compare different model performances:")
-        
-        # Create tabs for model comparison
-        model_tabs = st.tabs(["Random Forest", "XGBoost", "Logistic Regression"])
-        
-        with model_tabs[0]:
-            st.markdown("""
-            <div class="card">
-                <h4>Random Forest Performance</h4>
-                <p>Random Forest is our best performing model with high accuracy and good balance between precision and recall.</p>
-                <div class="progress-container">
-                    <div class="progress-bar" style="width: 92.5%;"></div>
-                </div>
-                <p>Accuracy: 92.5%</p>
+    
+    with model_tabs[1]:
+        st.markdown("""
+        <div class="card">
+            <h4>XGBoost Performance</h4>
+            <p>XGBoost performs slightly worse than Random Forest but has faster training time.</p>
+            <div class="progress-container">
+                <div class="progress-bar" style="width: 91.2%;"></div>
             </div>
-            """, unsafe_allow_html=True)
-        
-        with model_tabs[1]:
-            st.markdown("""
-            <div class="card">
-                <h4>XGBoost Performance</h4>
-                <p>XGBoost performs slightly worse than Random Forest but has faster training time.</p>
-                <div class="progress-container">
-                    <div class="progress-bar" style="width: 91.2%;"></div>
-                </div>
-                <p>Accuracy: 91.2%</p>
+            <p>Accuracy: 91.2%</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with model_tabs[2]:
+        st.markdown("""
+        <div class="card">
+            <h4>Logistic Regression Performance</h4>
+            <p>Logistic Regression is our baseline model with decent performance and high interpretability.</p>
+            <div class="progress-container">
+                <div class="progress-bar" style="width: 85.7%;"></div>
             </div>
-            """, unsafe_allow_html=True)
-        
-        with model_tabs[2]:
-            st.markdown("""
-            <div class="card">
-                <h4>Logistic Regression Performance</h4>
-                <p>Logistic Regression is our baseline model with decent performance and high interpretability.</p>
-                <div class="progress-container">
-                    <div class="progress-bar" style="width: 85.7%;"></div>
-                </div>
-                <p>Accuracy: 85.7%</p>
-            </div>
-            """, unsafe_allow_html=True)
+            <p>Accuracy: 85.7%</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # === MACHINE LEARNING CLASSIFIER TAB ===
     with tab3:

@@ -47,6 +47,19 @@ with st.form("user_input_form"):
         input_data[num_col] = st.slider(num_col, float(min_val), float(max_val), float(default_val))
 
     submit = st.form_submit_button("Predict")
+region = st.selectbox("Select Region", df1['REGION'].dropna().unique())
+top_pack = st.selectbox("Select Top Pack", df1['TOP_PACK'].dropna().unique())
+tenure = st.selectbox("Select Tenure", df1['TENURE'].dropna().unique())
+montant = st.number_input("Montant", min_value=0.0)
+frequence_rech = st.number_input("Frequence Rechargement", min_value=0.0)
+revenue = st.number_input("Revenue", min_value=0.0)
+arpu_segment = st.number_input("ARPU Segment", min_value=0.0)
+frequence = st.number_input("Frequence", min_value=0.0)
+data_volume = st.number_input("Data Volume", min_value=0.0)
+on_net = st.number_input("On Net", min_value=0.0)
+orange = st.number_input("Orange", min_value=0.0)
+tigo = st.number_input("Tigo", min_value=0.0)
+regularity = st.number_input("Regularity", min_value=0.0)
 #Prediction
 if st.button("Predict Churn"):
     # Step 1: Build raw input dict

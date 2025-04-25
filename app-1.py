@@ -54,7 +54,11 @@ if submit:
     input_data['TENURE'] = tenure_order.get(input_data['TENURE'], 0)
 
     # Assemble DataFrame
-    input_df = pd.DataFrame([input_data])[feature_order]
+    input_df = pd.DataFrame([input_data])
+
+# Only keep columns that exist in both
+    input_df = input_df.reindex(columns=feature_order)
+
 
     # Apply scaling to numerical features only
     num_cols = ['MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT', 

@@ -4,11 +4,9 @@ import joblib
 import numpy as np
 
 # Load saved model and preprocessing objects
-model = joblib.load("models/logistic_regression_model.joblib")
-imputer = joblib.load("preprocessing/imputer.joblib")
-scaler = joblib.load("preprocessing/scaler.joblib")
-top_pack_freq = joblib.load("preprocessing/top_pack_freq.joblib")
-feature_order = joblib.load("preprocessing/feature_order.joblib")  # list of 28 column names
+model = joblib.load("logistic_regression_model.joblib")
+
+feature_order = joblib.load("feature_names.joblib")  # list of 28 column names
 
 # TENURE mapping
 tenure_order = {

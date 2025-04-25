@@ -32,10 +32,41 @@ regions = [
 # UI
 st.title("📱 Expresso Churn Prediction App")
 
-# 1. Collect User Input
-st.header("🔍 Enter Customer Info")
 
-tenure = st.selectbox("TENURE", list(tenure_order.keys()))
+
+# URL to the dataset
+url = 'https://www.dropbox.com/scl/fi/nyxsztvzq6391uof9gnlh/Expresso_churn_dataset.csv?rlkey=reo343zfzvvt8762ttapsirdd&e=1&st=xxagtwkr&raw=1'
+
+# Load dataset
+df1 = pd.read_csv(url)
+
+# Clean column names by replacing spaces with underscores
+df1.columns = df1.columns.str.replace(' ', '_')
+
+# Define the columns for different types of encoding or selection
+freq_cols = ['REGION', 'TOP_PACK']  # Frequency encoding or value mapping
+onehot_cols = ['TENURE']  # One-hot encoding (mapped labels)
+scale_cols = ['MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT', 'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY']  # Scale/normalize
+
+# Extract unique values for frequency encoding and one-hot encoding columns
+freq_uniques = {col: df1[col].dropna().unique().tolist() for col in freq_cols}
+onehot_uniques = {col: df1[col].dropna().unique().tolist() for col in onehot_cols}
+scale_uniques = {col: df1[col].dropna().unique().tolist() for col in scale_cols}
+
+# Output to check what’s extracted
+st.write("Frequency Encoding Options:", freq_uniques)
+st.write("One-Hot Encoding Options:", onehot_uniques)
+st.write("Scaling Options:", scale_uniques)
+
+# Now you can integrate this into your Streamlit app
+# Select options for frequency encoded columns (e.g., region, top pack)
+region = st.selectbox("Select Region", freq_uniques['REGION'])
+top_pack = st.selectbox("Select Top Pack", freq_uniques['TOP_PACK'])
+
+# Select options for one-hot encoded columns (e.g., tenure)
+tenure = st.selectbox("Select Tenure", onehot_uniques['TENURE'])
+
+# Accept numerical inputs for scaled features
 montant = st.number_input("MONTANT (recharge amount)", min_value=0.0)
 frequence_rech = st.number_input("FREQUENCE_RECH (recharges/month)", min_value=0.0)
 revenue = st.number_input("REVENUE", min_value=0.0)
@@ -46,28 +77,12 @@ on_net = st.number_input("ON_NET (on-net calls)", min_value=0.0)
 orange = st.number_input("ORANGE (orange calls)", min_value=0.0)
 tigo = st.number_input("TIGO (tigo calls)", min_value=0.0)
 regularity = st.number_input("REGULARITY (active months)", min_value=0.0)
-freq_top_pack = st.number_input("FREQ_TOP_PACK", min_value=0.0)
-region = st.selectbox("REGION", regions)
-top_pack = st.text_input("TOP_PACK")
 
-# 2. Predict Button
+# Create a button for prediction
 if st.button("Predict Churn"):
-    # 3. Preprocess Manually
-
-    # Map tenure
-    tenure_mapped = tenure_order.get(tenure, 0)
-
-    # One-hot encode REGION
-    region_encoded = {f"REGION_{r}": 0 for r in regions}
-    region_encoded[f"REGION_{region}"] = 1 if f"REGION_{region}" in region_encoded else 0
-
-    # Frequency encode TOP_PACK
-    top_pack_value = top_pack_freq.get(top_pack, 0)
-    top_pack_norm = scaler.transform([[top_pack_value]])[0][0]  # Normalize
-
-    # Assemble final input
+    # Prepare the data dictionary for prediction
     input_data = {
-        'TENURE': tenure_mapped,
+        'TENURE': tenure,
         'MONTANT': montant,
         'FREQUENCE_RECH': frequence_rech,
         'REVENUE': revenue,
@@ -78,10 +93,15 @@ if st.button("Predict Churn"):
         'ORANGE': orange,
         'TIGO': tigo,
         'REGULARITY': regularity,
-        'FREQ_TOP_PACK': freq_top_pack,
-        **region_encoded,
-        'TOP_PACK_FE': top_pack_norm
+        # Map frequency and one-hot encoded columns
+        'REGION': region,
+        'TOP_PACK': top_pack
     }
+
+    # Convert to DataFrame for model input
+    input_df = pd.DataFrame([input_data])
+
+    
 
     # Ensure feature order
     input_df = pd.DataFrame([input_data])[feature_order]

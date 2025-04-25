@@ -1,116 +1,92 @@
 import streamlit as st
 import pandas as pd
-import joblib
 import numpy as np
+import joblib
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
-# Load model and preprocessing objects
+# Load saved model & references
 model = joblib.load("logistic_regression_model.joblib")
-scaler = joblib.load("scaler.joblib")
-feature_order = joblib.load("feature_names.joblib")
-col_info = joblib.load("col_info1.joblib")  # contains feature UI data
+feature_names = joblib.load("feature_names.joblib")
+col_info = joblib.load("col_info1.joblib")  # Contains options like TENURE, REGION, TOP_PACK
 
-# TENURE mapping (some values are duplicates)
-tenure_order = {
-    'A 0-3 month': 0,
-    'B 3-6 month': 1,
-    'C 6-9 month': 2,
-    'D 9-12 month': 3,
-    'E 12-15 month': 4,
-    'F 15-18 month': 5,
-    'G 18-21 month': 6,
-    'H 21-24 month': 7,
-    'I 18-21 month': 6,
-    'J 21-24 month': 7,
-    'K > 24 month': 8
-}  
+# -----------------------
+# UI: User Input Form
+# -----------------------
+with st.form("predict_form"):
+    st.title("📱 Churn Prediction (Expresso Users)")
 
-# App title
-st.title("📱 Expresso Churn Prediction App")
+    REGION = st.selectbox("REGION", col_info["REGION"])
+    TOP_PACK = st.selectbox("TOP_PACK", col_info["TOP_PACK"])
+    TENURE = st.selectbox("TENURE", col_info["TENURE"])
 
-# Input form
-with st.form("user_input_form"):
-    st.subheader("📋 Customer Information")
+    MONTANT = st.slider("MONTANT", 0.0, 100000.0, 1000.0)
+    FREQUENCE_RECH = st.slider("FREQUENCE_RECH", 0.0, 100.0, 5.0)
+    REVENUE = st.slider("REVENUE", 0.0, 100000.0, 1000.0)
+    ARPU_SEGMENT = st.slider("ARPU_SEGMENT", 0.0, 50000.0, 500.0)
+    FREQUENCE = st.slider("FREQUENCE", 0.0, 100.0, 5.0)
+    DATA_VOLUME = st.slider("DATA_VOLUME", 0.0, 100000.0, 500.0)
+    ON_NET = st.slider("ON_NET", 0.0, 100000.0, 1000.0)
+    ORANGE = st.slider("ORANGE", 0.0, 100000.0, 1000.0)
+    TIGO = st.slider("TIGO", 0.0, 100000.0, 1000.0)
+    REGULARITY = st.slider("REGULARITY", 0.0, 1.0, 0.5)
+    FREQ_TOP_PACK = st.slider("FREQ_TOP_PACK", 0.0, 100.0, 5.0)
 
-    input_data = {}
+    submitted = st.form_submit_button("Predict")
 
-    # Categorical features
-    for cat_col in ['TOP_PACK', 'REGION', 'TENURE']:
-        options = col_info.get(cat_col, [])
-        input_data[cat_col] = st.selectbox(f"{cat_col}", options)
+# -----------------------
+# Data Transformation
+# -----------------------
+if submitted:
+    # 1. Raw input
+    df = pd.DataFrame([{
+        "REGION": REGION, "TOP_PACK": TOP_PACK, "TENURE": TENURE,
+        "MONTANT": MONTANT, "FREQUENCE_RECH": FREQUENCE_RECH,
+        "REVENUE": REVENUE, "ARPU_SEGMENT": ARPU_SEGMENT, "FREQUENCE": FREQUENCE,
+        "DATA_VOLUME": DATA_VOLUME, "ON_NET": ON_NET, "ORANGE": ORANGE,
+        "TIGO": TIGO, "REGULARITY": REGULARITY, "FREQ_TOP_PACK": FREQ_TOP_PACK
+    }])
 
-    # Numerical features
-    for num_col in ['MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT', 
-                    'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO',
-                    'REGULARITY', 'FREQ_TOP_PACK']:
-        min_val, max_val = col_info[num_col]
-        default_val = (min_val + max_val) / 2
-        input_data[num_col] = st.slider(num_col, float(min_val), float(max_val), float(default_val))
-
-    submit = st.form_submit_button("Predict")
-region = st.selectbox("Select Region", df1['REGION'].dropna().unique())
-top_pack = st.selectbox("Select Top Pack", df1['TOP_PACK'].dropna().unique())
-tenure = st.selectbox("Select Tenure", df1['TENURE'].dropna().unique())
-montant = st.number_input("Montant", min_value=0.0)
-frequence_rech = st.number_input("Frequence Rechargement", min_value=0.0)
-revenue = st.number_input("Revenue", min_value=0.0)
-arpu_segment = st.number_input("ARPU Segment", min_value=0.0)
-frequence = st.number_input("Frequence", min_value=0.0)
-data_volume = st.number_input("Data Volume", min_value=0.0)
-on_net = st.number_input("On Net", min_value=0.0)
-orange = st.number_input("Orange", min_value=0.0)
-tigo = st.number_input("Tigo", min_value=0.0)
-regularity = st.number_input("Regularity", min_value=0.0)
-#Prediction
-if st.button("Predict Churn"):
-    # Step 1: Build raw input dict
-    input_data = {
-        'REGION': region,
-        'TOP_PACK': top_pack,
-        'TENURE': tenure,
-        'MONTANT': montant,
-        'FREQUENCE_RECH': frequence_rech,
-        'REVENUE': revenue,
-        'ARPU_SEGMENT': arpu_segment,
-        'FREQUENCE': frequence,
-        'DATA_VOLUME': data_volume,
-        'ON_NET': on_net,
-        'ORANGE': orange,
-        'TIGO': tigo,
-        'REGULARITY': regularity
+    # 2. Map TENURE
+    tenure_order = {
+        'A 0-3 month': 0, 'B 3-6 month': 1, 'C 6-9 month': 2, 'D 9-12 month': 3,
+        'E 12-15 month': 4, 'F 15-18 month': 5, 'G 18-21 month': 6, 'H 21-24 month': 7,
+        'I 18-21 month': 6, 'J 21-24 month': 7, 'K > 24 month': 8
     }
-    raw_df = pd.DataFrame([input_data])
+    df["TENURE"] = df["TENURE"].map(tenure_order)
 
-    # Step 2: Apply frequency encoding
-    for col in ['REGION', 'TOP_PACK']:
-        freqs = df1[col].value_counts(normalize=True).to_dict()
-        raw_df[col] = raw_df[col].map(freqs)
+    # 3. One-hot encode REGION (with NaN)
+    df = pd.get_dummies(df, columns=["REGION"], prefix="REGION", dummy_na=True)
 
-    # Step 3: Apply one-hot encoding for TENURE
-    for key in tenure_order.keys():
-        raw_df[f'TENURE_{key}'] = 1 if tenure == key else 0
-    raw_df.drop(columns=['TENURE'], inplace=True)
+    # 4. Frequency encode TOP_PACK and normalize
+    top_pack_freq = pd.Series(col_info["TOP_PACK"]).value_counts()
+    df["TOP_PACK_FE"] = df["TOP_PACK"].map(top_pack_freq).fillna(0)
+    df.drop(columns=["TOP_PACK"], inplace=True)
 
-    # Step 4: Scale numerical columns
-    scale_cols = ['MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT', 'FREQUENCE',
-                  'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY']
+    minmax = MinMaxScaler()
+    df["TOP_PACK_FE"] = minmax.fit_transform(df[["TOP_PACK_FE"]])
 
-    scaler = joblib.load("scaler.joblib")
-    scaled_values = scaler.transform(raw_df[scale_cols])
-    scaled_df = pd.DataFrame(scaled_values, columns=scale_cols)
+    # 5. Convert boolean (if any) to int
+    bool_cols = df.select_dtypes("bool").columns
+    df[bool_cols] = df[bool_cols].astype(int)
 
-    # Step 5: Merge all into final input
-    others = raw_df.drop(columns=scale_cols)  # region/top_pack (freq) + TENURE_*
-    input_df = pd.concat([others, scaled_df], axis=1)
+    # 6. Add missing one-hot REGION columns if needed
+    for col in feature_names:
+        if col.startswith("REGION_") and col not in df.columns:
+            df[col] = 0
 
-    # Step 6: Align column order to match training
-    input_df = input_df.reindex(columns=feature_order, fill_value=0)
+    # 7. Reorder columns and fill missing
+    df = df.reindex(columns=feature_names, fill_value=0)
 
-    # Step 7: Predict
-    prediction = model.predict(input_df)[0]
-    probability = model.predict_proba(input_df)[0][1]
+    from sklearn.preprocessing import StandardScaler
 
-    # Display results
-    st.subheader("📊 Prediction Result")
-    st.write("Churn Prediction:", "Yes ✅" if prediction == 1 else "No ❌")
-    st.write(f"Churn Probability: {probability:.2%}")
+    scaler = StandardScaler()
+    df_scaled = scaler.fit_transform(df)
 
+    # -----------------------
+    # Predict & Display
+    # -----------------------
+    prediction = model.predict(df_scaled)[0]
+    prob = model.predict_proba(df_scaled)[0][1]
+
+    st.success("✅ Churn" if prediction == 1 else "❌ Not Churn")
+    st.info(f"📈 Churn Probability: {prob:.2%}")

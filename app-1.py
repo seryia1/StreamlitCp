@@ -3,12 +3,13 @@ import pandas as pd
 import joblib
 import numpy as np
 
-# Load saved model and preprocessing objects
+# Load model and preprocessing objects
 model = joblib.load("logistic_regression_model.joblib")
+scaler = joblib.load("scaler.joblib")
+feature_order = joblib.load("feature_names.joblib")
+col_info = joblib.load("col_info.joblib")  # contains feature UI data
 
-feature_order = joblib.load("feature_names.joblib")  # list of 28 column names
-
-# TENURE mapping
+# TENURE mapping (some values are duplicates)
 tenure_order = {
     'A 0-3 month': 0,
     'B 3-6 month': 1,
@@ -23,95 +24,48 @@ tenure_order = {
     'K > 24 month': 8
 }
 
-# Regions used during training
-regions = [
-    'Dakar', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Louga', 'Matam',
-    'Saint-Louis', 'Sedhiou', 'Tambacounda', 'Thies', 'Ziguinchor', np.nan
-]
-
-# UI
+# App title
 st.title("📱 Expresso Churn Prediction App")
 
+# Input form
+with st.form("user_input_form"):
+    st.subheader("📋 Customer Information")
 
+    input_data = {}
 
-# URL to the dataset
-url = 'https://www.dropbox.com/scl/fi/nyxsztvzq6391uof9gnlh/Expresso_churn_dataset.csv?rlkey=reo343zfzvvt8762ttapsirdd&e=1&st=xxagtwkr&raw=1'
+    # Categorical features
+    for cat_col in ['TOP_PACK', 'REGION', 'TENURE']:
+        options = col_info.get(cat_col, [])
+        input_data[cat_col] = st.selectbox(f"{cat_col}", options)
 
-# Load dataset
-df1 = pd.read_csv(url)
+    # Numerical features
+    for num_col in ['MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT', 
+                    'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO',
+                    'REGULARITY', 'FREQ_TOP_PACK']:
+        min_val, max_val = col_info[num_col]
+        default_val = (min_val + max_val) / 2
+        input_data[num_col] = st.slider(num_col, float(min_val), float(max_val), float(default_val))
 
-# Clean column names by replacing spaces with underscores
-df1.columns = df1.columns.str.replace(' ', '_')
+    submit = st.form_submit_button("Predict")
 
-# Define the columns for different types of encoding or selection
-freq_cols = ['REGION', 'TOP_PACK']  # Frequency encoding or value mapping
-onehot_cols = ['TENURE']  # One-hot encoding (mapped labels)
-scale_cols = ['MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT', 'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY']  # Scale/normalize
+# Prediction
+if submit:
+    # Replace tenure with its mapped value
+    input_data['TENURE'] = tenure_order.get(input_data['TENURE'], 0)
 
-# Extract unique values for frequency encoding and one-hot encoding columns
-freq_uniques = {col: df1[col].dropna().unique().tolist() for col in freq_cols}
-onehot_uniques = {col: df1[col].dropna().unique().tolist() for col in onehot_cols}
-scale_uniques = {col: df1[col].dropna().unique().tolist() for col in scale_cols}
-
-# Output to check what’s extracted
-st.write("Frequency Encoding Options:", freq_uniques)
-st.write("One-Hot Encoding Options:", onehot_uniques)
-st.write("Scaling Options:", scale_uniques)
-
-# Now you can integrate this into your Streamlit app
-# Select options for frequency encoded columns (e.g., region, top pack)
-region = st.selectbox("Select Region", freq_uniques['REGION'])
-top_pack = st.selectbox("Select Top Pack", freq_uniques['TOP_PACK'])
-
-# Select options for one-hot encoded columns (e.g., tenure)
-tenure = st.selectbox("Select Tenure", onehot_uniques['TENURE'])
-
-# Accept numerical inputs for scaled features
-montant = st.number_input("MONTANT (recharge amount)", min_value=0.0)
-frequence_rech = st.number_input("FREQUENCE_RECH (recharges/month)", min_value=0.0)
-revenue = st.number_input("REVENUE", min_value=0.0)
-arpu_segment = st.number_input("ARPU_SEGMENT", min_value=0.0)
-frequence = st.number_input("FREQUENCE (activity days)", min_value=0.0)
-data_volume = st.number_input("DATA_VOLUME (MB)", min_value=0.0)
-on_net = st.number_input("ON_NET (on-net calls)", min_value=0.0)
-orange = st.number_input("ORANGE (orange calls)", min_value=0.0)
-tigo = st.number_input("TIGO (tigo calls)", min_value=0.0)
-regularity = st.number_input("REGULARITY (active months)", min_value=0.0)
-
-# Create a button for prediction
-if st.button("Predict Churn"):
-    # Prepare the data dictionary for prediction
-    input_data = {
-        'TENURE': tenure,
-        'MONTANT': montant,
-        'FREQUENCE_RECH': frequence_rech,
-        'REVENUE': revenue,
-        'ARPU_SEGMENT': arpu_segment,
-        'FREQUENCE': frequence,
-        'DATA_VOLUME': data_volume,
-        'ON_NET': on_net,
-        'ORANGE': orange,
-        'TIGO': tigo,
-        'REGULARITY': regularity,
-        # Map frequency and one-hot encoded columns
-        'REGION': region,
-        'TOP_PACK': top_pack
-    }
-
-    # Convert to DataFrame for model input
-    input_df = pd.DataFrame([input_data])
-
-    
-
-    # Ensure feature order
+    # Assemble DataFrame
     input_df = pd.DataFrame([input_data])[feature_order]
 
-    # Impute any missing values (if applicable)
-    input_df_imputed = pd.DataFrame(imputer.transform(input_df), columns=input_df.columns)
+    # Apply scaling to numerical features only
+    num_cols = ['MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT', 
+                'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO',
+                'REGULARITY', 'FREQ_TOP_PACK']
+    
+    input_df[num_cols] = scaler.transform(input_df[num_cols])
 
     # Predict
-    prediction = model.predict(input_df_imputed)[0]
-    probability = model.predict_proba(input_df_imputed)[0][1]
+    prediction = model.predict(input_df)[0]
+    probability = model.predict_proba(input_df)[0][1]
 
     # Output
     st.subheader("📊 Prediction Result")

@@ -74,10 +74,10 @@ if submitted:
         if col.startswith("REGION_") and col not in df.columns:
             df[col] = 0
 
+    
     # 7. Reorder columns and fill missing
     df = df.reindex(columns=feature_names, fill_value=0)
-    # Drop rows with any NaNs before scaling to avoid prediction issues
-    df.dropna(inplace=True)
+    df.fillna(0, inplace=True)
 
     from sklearn.preprocessing import StandardScaler
 

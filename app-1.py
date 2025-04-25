@@ -1,49 +1,101 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
-from sklearn.preprocessing import StandardScaler
-from sklearn.impute import SimpleImputer
+import numpy as np
 
-# Load trained model and preprocessing objects
-model = joblib.load("logistic_regression_model.joblib")  # Either Random Forest or Logistic Regression
-scaler = joblib.load("scaler.joblib")
-imputer = joblib.load("imputer.joblib")
-features = joblib.load("feature_names.joblib")  # List of columns used during training
+# Load saved model and preprocessing objects
+model = joblib.load("models/logistic_regression_model.joblib")
+imputer = joblib.load("preprocessing/imputer.joblib")
+scaler = joblib.load("preprocessing/scaler.joblib")
+top_pack_freq = joblib.load("preprocessing/top_pack_freq.joblib")
+feature_order = joblib.load("preprocessing/feature_order.joblib")  # list of 28 column names
 
-# Title
-st.set_page_config(page_title="Churn Prediction App", layout="centered")
-st.title("📊 Customer Churn Prediction")
-st.markdown("Enter customer data below to predict the likelihood of churn.")
+# TENURE mapping
+tenure_order = {
+    'A 0-3 month': 0,
+    'B 3-6 month': 1,
+    'C 6-9 month': 2,
+    'D 9-12 month': 3,
+    'E 12-15 month': 4,
+    'F 15-18 month': 5,
+    'G 18-21 month': 6,
+    'H 21-24 month': 7,
+    'I 18-21 month': 6,
+    'J 21-24 month': 7,
+    'K > 24 month': 8
+}
 
-# Sidebar Input
-def user_input_form():
-    st.sidebar.header("User Input")
-    input_data = {}
+# Regions used during training
+regions = [
+    'Dakar', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Louga', 'Matam',
+    'Saint-Louis', 'Sedhiou', 'Tambacounda', 'Thies', 'Ziguinchor', np.nan
+]
 
-    for col in features:
-        if 'avg' in col or 'rate' in col or 'count' in col or 'total' in col:
-            input_data[col] = st.sidebar.number_input(col, min_value=0.0, step=0.1)
-        else:
-            input_data[col] = st.sidebar.number_input(col, step=1)
+# UI
+st.title("📱 Expresso Churn Prediction App")
 
-    return pd.DataFrame([input_data])
+# 1. Collect User Input
+st.header("🔍 Enter Customer Info")
 
-# Get input and preprocess
-input_df = user_input_form()
+tenure = st.selectbox("TENURE", list(tenure_order.keys()))
+montant = st.number_input("MONTANT (recharge amount)", min_value=0.0)
+frequence_rech = st.number_input("FREQUENCE_RECH (recharges/month)", min_value=0.0)
+revenue = st.number_input("REVENUE", min_value=0.0)
+arpu_segment = st.number_input("ARPU_SEGMENT", min_value=0.0)
+frequence = st.number_input("FREQUENCE (activity days)", min_value=0.0)
+data_volume = st.number_input("DATA_VOLUME (MB)", min_value=0.0)
+on_net = st.number_input("ON_NET (on-net calls)", min_value=0.0)
+orange = st.number_input("ORANGE (orange calls)", min_value=0.0)
+tigo = st.number_input("TIGO (tigo calls)", min_value=0.0)
+regularity = st.number_input("REGULARITY (active months)", min_value=0.0)
+freq_top_pack = st.number_input("FREQ_TOP_PACK", min_value=0.0)
+region = st.selectbox("REGION", regions)
+top_pack = st.text_input("TOP_PACK")
 
-# Apply imputation and scaling
-input_imputed = imputer.transform(input_df)
-input_scaled = scaler.transform(input_imputed)
+# 2. Predict Button
+if st.button("Predict Churn"):
+    # 3. Preprocess Manually
 
-# Predict
-pred_proba = model.predict_proba(input_scaled)[0][1]
-pred_label = model.predict(input_scaled)[0]
+    # Map tenure
+    tenure_mapped = tenure_order.get(tenure, 0)
 
-# Display results
-st.subheader("Prediction")
-st.metric("Churn Probability", f"{pred_proba:.2%}")
-st.write("Prediction:", "🔴 **Will Churn**" if pred_label == 1 else "🟢 **Will Stay**")
+    # One-hot encode REGION
+    region_encoded = {f"REGION_{r}": 0 for r in regions}
+    region_encoded[f"REGION_{region}"] = 1 if f"REGION_{region}" in region_encoded else 0
 
-st.markdown("---")
-st.markdown("✅ This prediction uses the model trained on the full dataset with SMOTE and scaling.")
+    # Frequency encode TOP_PACK
+    top_pack_value = top_pack_freq.get(top_pack, 0)
+    top_pack_norm = scaler.transform([[top_pack_value]])[0][0]  # Normalize
+
+    # Assemble final input
+    input_data = {
+        'TENURE': tenure_mapped,
+        'MONTANT': montant,
+        'FREQUENCE_RECH': frequence_rech,
+        'REVENUE': revenue,
+        'ARPU_SEGMENT': arpu_segment,
+        'FREQUENCE': frequence,
+        'DATA_VOLUME': data_volume,
+        'ON_NET': on_net,
+        'ORANGE': orange,
+        'TIGO': tigo,
+        'REGULARITY': regularity,
+        'FREQ_TOP_PACK': freq_top_pack,
+        **region_encoded,
+        'TOP_PACK_FE': top_pack_norm
+    }
+
+    # Ensure feature order
+    input_df = pd.DataFrame([input_data])[feature_order]
+
+    # Impute any missing values (if applicable)
+    input_df_imputed = pd.DataFrame(imputer.transform(input_df), columns=input_df.columns)
+
+    # Predict
+    prediction = model.predict(input_df_imputed)[0]
+    probability = model.predict_proba(input_df_imputed)[0][1]
+
+    # Output
+    st.subheader("📊 Prediction Result")
+    st.write("Churn Prediction:", "Yes ✅" if prediction == 1 else "No ❌")
+    st.write(f"Churn Probability: {probability:.2%}")

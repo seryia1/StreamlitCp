@@ -47,31 +47,57 @@ with st.form("user_input_form"):
         input_data[num_col] = st.slider(num_col, float(min_val), float(max_val), float(default_val))
 
     submit = st.form_submit_button("Predict")
+#Prediction
+if st.button("Predict Churn"):
+    # Step 1: Build raw input dict
+    input_data = {
+        'REGION': region,
+        'TOP_PACK': top_pack,
+        'TENURE': tenure,
+        'MONTANT': montant,
+        'FREQUENCE_RECH': frequence_rech,
+        'REVENUE': revenue,
+        'ARPU_SEGMENT': arpu_segment,
+        'FREQUENCE': frequence,
+        'DATA_VOLUME': data_volume,
+        'ON_NET': on_net,
+        'ORANGE': orange,
+        'TIGO': tigo,
+        'REGULARITY': regularity
+    }
+    raw_df = pd.DataFrame([input_data])
 
-# Prediction
-if submit:
-    # Replace tenure with its mapped value
-    input_data['TENURE'] = tenure_order.get(input_data['TENURE'], 0)
+    # Step 2: Apply frequency encoding
+    for col in ['REGION', 'TOP_PACK']:
+        freqs = df1[col].value_counts(normalize=True).to_dict()
+        raw_df[col] = raw_df[col].map(freqs)
 
-    # Assemble DataFrame
-    input_df = pd.DataFrame([input_data])
+    # Step 3: Apply one-hot encoding for TENURE
+    for key in tenure_order.keys():
+        raw_df[f'TENURE_{key}'] = 1 if tenure == key else 0
+    raw_df.drop(columns=['TENURE'], inplace=True)
 
-# Only keep columns that exist in both
-    input_df = input_df.reindex(columns=feature_order)
+    # Step 4: Scale numerical columns
+    scale_cols = ['MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT', 'FREQUENCE',
+                  'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY']
 
+    scaler = joblib.load("scaler.joblib")
+    scaled_values = scaler.transform(raw_df[scale_cols])
+    scaled_df = pd.DataFrame(scaled_values, columns=scale_cols)
 
-    # Apply scaling to numerical features only
-    num_cols = ['MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT', 
-                'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO',
-                'REGULARITY', 'FREQ_TOP_PACK']
-    
-    input_df[num_cols] = scaler.transform(input_df[num_cols])
+    # Step 5: Merge all into final input
+    others = raw_df.drop(columns=scale_cols)  # region/top_pack (freq) + TENURE_*
+    input_df = pd.concat([others, scaled_df], axis=1)
 
-    # Predict
+    # Step 6: Align column order to match training
+    input_df = input_df.reindex(columns=feature_order, fill_value=0)
+
+    # Step 7: Predict
     prediction = model.predict(input_df)[0]
     probability = model.predict_proba(input_df)[0][1]
 
-    # Output
+    # Display results
     st.subheader("📊 Prediction Result")
     st.write("Churn Prediction:", "Yes ✅" if prediction == 1 else "No ❌")
     st.write(f"Churn Probability: {probability:.2%}")
+

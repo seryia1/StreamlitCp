@@ -22,7 +22,7 @@ tenure_order = {
     'I 18-21 month': 6,
     'J 21-24 month': 7,
     'K > 24 month': 8
-}
+}  
 
 # App title
 st.title("📱 Expresso Churn Prediction App")

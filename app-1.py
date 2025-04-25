@@ -7,7 +7,7 @@ import numpy as np
 model = joblib.load("logistic_regression_model.joblib")
 scaler = joblib.load("scaler.joblib")
 feature_order = joblib.load("feature_names.joblib")
-col_info = joblib.load("col_info.joblib")  # contains feature UI data
+col_info = joblib.load("col_info1.joblib")  # contains feature UI data
 
 # TENURE mapping (some values are duplicates)
 tenure_order = {

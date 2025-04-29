@@ -82,7 +82,7 @@ if submitted:
     from sklearn.preprocessing import StandardScaler
 
     scaler = StandardScaler()
-    df_scaled = scaler.fit_transform(df)
+    df_scaled = scaler.transform(df)
 
     # -----------------------
     # Predict & Display

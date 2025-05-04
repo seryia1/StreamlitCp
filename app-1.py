@@ -20,9 +20,9 @@ with st.form("predict_form"):
     TENURE = st.selectbox("TENURE", col_info["TENURE"])
 
     
-    ARPU_SEGMENT = st.slider("ARPU_SEGMENT", col_info["TENURE"])
+    ARPU_SEGMENT = st.selectbox("ARPU_SEGMENT", col_info["TENURE"])
     
-    REGULARITY = st.slider("REGULARITY", 0.0, 1.0, 0.5)
+    REGULARITY = st.selectbox("REGULARITY", 0.0, 1.0, 0.5)
     
 
     submitted = st.form_submit_button("Predict")

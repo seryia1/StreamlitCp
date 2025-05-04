@@ -50,6 +50,7 @@ tenure_order = ['A < 1 month', 'B 1-3 month', 'C 3-6 month', 'D 6-9 month',
                 'E 9-12 month', 'F 12-15 month', 'G 15-18 month', 'H 18-21 month',
                 'I 21-24 month', 'J 24 month', 'K > 24 month']
 df['TENURE_OE'] = df['TENURE'].astype(pd.CategoricalDtype(categories=tenure_order, ordered=True)).cat.codes
+df.drop(columns=['REGION', 'TENURE'], inplace=True)
 from sklearn.preprocessing import StandardScaler
 num_cols = ['ARPU_SEGMENT', 'REGULARITY']
 scaler = StandardScaler()

@@ -63,6 +63,7 @@ if submitted:
 
     # 5. Drop unused columns
     df.drop(columns=['REGION', 'TENURE'], inplace=True)
+    df
 
     # -----------------------
     # Predict & Show Results

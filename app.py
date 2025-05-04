@@ -14,12 +14,21 @@ col_info = joblib.load("unique_elements_dict1.joblib")  # Includes REGION, TENUR
 st.title("📱 Churn Prediction (Expresso Users)")
 
 with st.form("predict_form"):
+    st.title("📱 Churn Prediction (Expresso Users)")
+
     REGION = st.selectbox("REGION", col_info["REGION"])
     TENURE = st.selectbox("TENURE", col_info["TENURE"])
-    ARPU_SEGMENT = st.selectbox("ARPU_SEGMENT", col_info["ARPU_SEGMENT"])
-    REGULARITY = st.selectbox("REGULARITY", col_info["REGULARITY"])
+    
+    arpu_min = min(col_info["ARPU_SEGMENT"])
+    arpu_max = max(col_info["ARPU_SEGMENT"])
+    ARPU_SEGMENT = st.slider("ARPU_SEGMENT", min_value=float(arpu_min), max_value=float(arpu_max), value=float(arpu_min))
+
+    reg_min = min(col_info["REGULARITY"])
+    reg_max = max(col_info["REGULARITY"])
+    REGULARITY = st.slider("REGULARITY", min_value=float(reg_min), max_value=float(reg_max), value=float(reg_min))
 
     submitted = st.form_submit_button("Predict")
+
 
 # -----------------------
 # Logic only runs if submitted

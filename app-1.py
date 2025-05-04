@@ -59,8 +59,8 @@ df
     # -----------------------
     # Predict & Display
     # -----------------------
-    prediction = model.predict(df)[0]
-    prob = model.predict_proba(df)[0][1]
+prediction = model.predict(df)[0]
+prob = model.predict_proba(df)[0][1]
 
-    st.success("✅ Churn" if prediction == 1 else "❌ Not Churn")
-    st.info(f"📈 Churn Probability: {prob:.2%}")
+st.success("✅ Churn" if prediction == 1 else "❌ Not Churn")
+st.info(f"📈 Churn Probability: {prob:.2%}")

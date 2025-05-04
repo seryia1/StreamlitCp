@@ -11,7 +11,7 @@ col_info = joblib.load("unique_elements_dict1.joblib")  # Includes REGION, TENUR
 # -----------------------
 # UI: User Input Form
 # -----------------------
-st.title("📱 Churn Prediction (Expresso Users)")
+
 
 with st.form("predict_form"):
     st.title("📱 Churn Prediction (Expresso Users)")

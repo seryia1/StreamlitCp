@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 # Load saved model & references
 model = joblib.load("log_reg_over1.joblib")
-feature_names = joblib.load("feature_names.joblib")
+
 col_info = joblib.load("unique_elements_dict1.joblib")  # Contains options like TENURE, REGION, TOP_PACK
 
 # -----------------------

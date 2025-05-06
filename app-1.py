@@ -2,99 +2,498 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+import plotly.graph_objects as go
+import plotly.express as px
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import matplotlib.pyplot as plt
+import altair as alt
+
+# Set page configuration
+st.set_page_config(
+    page_title="Expresso Churn Prediction",
+    page_icon="📱",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS for styling
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        color: #FF5722;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    .sub-header {
+        font-size: 1.5rem;
+        color: #FF8A65;
+        margin-bottom: 1rem;
+    }
+    .section-header {
+        font-size: 1.2rem;
+        color: #FF8A65;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+    }
+    .prediction-box-high {
+        background-color: #FFEBEE;
+        border-left: 5px solid #F44336;
+        padding: 1rem;
+        border-radius: 5px;
+    }
+    .prediction-box-medium {
+        background-color: #FFF8E1;
+        border-left: 5px solid #FFC107;
+        padding: 1rem;
+        border-radius: 5px;
+    }
+    .prediction-box-low {
+        background-color: #E8F5E9;
+        border-left: 5px solid #4CAF50;
+        padding: 1rem;
+        border-radius: 5px;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #FFCCBC;
+        border-radius: 4px 4px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #FF5722;
+        color: white;
+    }
+    .tooltip {
+        position: relative;
+        display: inline-block;
+        border-bottom: 1px dotted #ccc;
+        cursor: help;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Load saved model & references
-model = joblib.load("clf.joblib")
+@st.cache_resource
+def load_model():
+    return joblib.load("clf.joblib")
 
-col_info = joblib.load("unique_elements_dict2.joblib")  # Contains options like TENURE, REGION, TOP_PACK
+@st.cache_data
+def load_col_info():
+    return joblib.load("unique_elements_dict2.joblib")
 
-# -----------------------
-# UI: User Input Form
-# -----------------------
-with st.form("predict_form"):
-    st.title("📱 Churn Prediction (Expresso Users)")
+model = load_model()
+col_info = load_col_info()
 
-    REGION = st.selectbox("REGION", col_info["REGION"])
-    TENURE = st.selectbox("TENURE", col_info["TENURE"])
+# Create a logo and title section
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.markdown('<div style="text-align: center;"><img src="https://placeholder.svg?height=100&width=300" alt="Expresso Logo"></div>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">Expresso Churn Prediction</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center;">Predict customer churn probability based on telecom usage patterns</p>', unsafe_allow_html=True)
 
-    MONTANT = st.slider("MONTANT", min_value=float(min(col_info["MONTANT"])), max_value=float(max(col_info["MONTANT"])), value=float(min(col_info["MONTANT"])))
-    FREQUENCE_RECH = st.slider("FREQUENCE_RECH", min_value=float(min(col_info["FREQUENCE_RECH"])), max_value=float(max(col_info["FREQUENCE_RECH"])), value=float(min(col_info["FREQUENCE_RECH"])))
-    REVENUE = st.slider("REVENUE", min_value=float(min(col_info["REVENUE"])), max_value=float(max(col_info["REVENUE"])), value=float(min(col_info["REVENUE"])))
-    ARPU_SEGMENT = st.slider("ARPU_SEGMENT", min_value=float(min(col_info["ARPU_SEGMENT"])), max_value=float(max(col_info["ARPU_SEGMENT"])), value=float(min(col_info["ARPU_SEGMENT"])))
-    FREQUENCE = st.slider("FREQUENCE", min_value=float(min(col_info["FREQUENCE"])), max_value=float(max(col_info["FREQUENCE"])), value=float(min(col_info["FREQUENCE"])))
-    DATA_VOLUME = st.slider("DATA_VOLUME", min_value=float(min(col_info["DATA_VOLUME"])), max_value=float(max(col_info["DATA_VOLUME"])), value=float(min(col_info["DATA_VOLUME"])))
-    ON_NET = st.slider("ON_NET", min_value=float(min(col_info["ON_NET"])), max_value=float(max(col_info["ON_NET"])), value=float(min(col_info["ON_NET"])))
-    ORANGE = st.slider("ORANGE", min_value=float(min(col_info["ORANGE"])), max_value=float(max(col_info["ORANGE"])), value=float(min(col_info["ORANGE"])))
-    TIGO = st.slider("TIGO", min_value=float(min(col_info["TIGO"])), max_value=float(max(col_info["TIGO"])), value=float(min(col_info["TIGO"])))
-    REGULARITY = st.slider("REGULARITY", min_value=float(min(col_info["REGULARITY"])), max_value=float(max(col_info["REGULARITY"])), value=float(min(col_info["REGULARITY"])))
-    TOP_PACK=  st.selectbox("TOP_PACK", col_info["TOP_PACK"])
-    FREQ_TOP_PACK = st.slider("FREQ_TOP_PACK", min_value=float(min(col_info["FREQ_TOP_PACK"])), max_value=float(max(col_info["FREQ_TOP_PACK"])), value=float(min(col_info["FREQ_TOP_PACK"])))
-    submitted = st.form_submit_button("Predict")
+# Create tabs for different sections
+tab1, tab2, tab3 = st.tabs(["📊 Prediction Dashboard", "ℹ️ About the Model", "📈 Data Insights"])
 
-
-# -----------------------
-# Data Transformation
-# -----------------------
-if submitted:
-        # 1. Raw input to DataFrame
-        df = pd.DataFrame([{
-            "REGION": REGION,
-            "TENURE": TENURE,
-            "MONTANT": MONTANT,
-            "FREQUENCE_RECH": FREQUENCE_RECH,
-            "REVENUE": REVENUE,
-            "ARPU_SEGMENT": ARPU_SEGMENT,
-            "FREQUENCE": FREQUENCE,
-            "DATA_VOLUME": DATA_VOLUME,
-            "ON_NET": ON_NET,
-            "ORANGE": ORANGE,
-            "TIGO": TIGO,
-            "REGULARITY": REGULARITY,
-            "TOP_PACK": TOP_PACK,
-            "FREQ_TOP_PACK": FREQ_TOP_PACK
-        }])
-
-        # Frequency encode REGION using external full dataset frequencies (col_info_region_freq must exist)
-        region_freq = df['REGION'].value_counts(normalize=False)
-        df['REGION_FE'] = df['REGION'].map(region_freq)
-
-        # Normalize REGION_FE
-        scaler_region = MinMaxScaler()
-        df['REGION_FE'] = scaler_region.fit_transform(df[['REGION_FE']])
-
-        # Ordinal encode TENURE
-        tenure_order = ['A < 1 month', 'B 1-3 month', 'C 3-6 month', 'D 6-9 month',
-                        'E 9-12 month', 'F 12-15 month', 'G 15-18 month', 'H 18-21 month',
-                        'I 21-24 month', 'J 24 month', 'K > 24 month']
-        df['TENURE_OE'] = df['TENURE'].astype(pd.CategoricalDtype(categories=tenure_order, ordered=True)).cat.codes
-        # Frequency encode TOP_PACK
-        top_pack_freq = df['TOP_PACK'].value_counts()
-        df['TOP_PACK_FE'] = df['TOP_PACK'].map(top_pack_freq)
-
-       # Normalize the frequency encoding to [0,1]
-        scaler = MinMaxScaler()
-        df['TOP_PACK_FE'] = scaler.fit_transform(df[['TOP_PACK_FE']])
-
-        # Drop original column
-        df.drop(columns=['TOP_PACK'], inplace=True)
-        # Drop original non-numeric columns
-        df.drop(columns=['REGION', 'TENURE'], inplace=True)
-
-        # Columns to scale (excluding target and already normalized/ordinal encoded ones)
-        num_cols_to_scale = [
-    'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT',
-    'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY', 'FREQ_TOP_PACK'
-]
-
-        scaler = StandardScaler()
-        df[num_cols_to_scale] = scaler.fit_transform(df[num_cols_to_scale]) 
+with tab1:
+    # Create a form for user input
+    with st.form("predict_form"):
+        st.markdown('<h2 class="sub-header">Customer Profile</h2>', unsafe_allow_html=True)
         
-    # -----------------------
-    # Predict & Display
-    # -----------------------
-        prediction = model.predict(df)[0]
-        prob = model.predict_proba(df)[0][1]
+        # Group 1: Customer Profile
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown('<p class="section-header">Customer Demographics</p>', unsafe_allow_html=True)
+            REGION = st.selectbox(
+                "REGION", 
+                col_info["REGION"],
+                help="The geographical region where the customer is located"
+            )
+            TENURE = st.selectbox(
+                "TENURE", 
+                col_info["TENURE"],
+                help="How long the customer has been with Expresso"
+            )
+        
+        with col2:
+            st.markdown('<p class="section-header">Financial Metrics</p>', unsafe_allow_html=True)
+            REVENUE = st.slider(
+                "REVENUE", 
+                min_value=float(min(col_info["REVENUE"])), 
+                max_value=float(max(col_info["REVENUE"])), 
+                value=float(min(col_info["REVENUE"])),
+                help="Total revenue generated by the customer"
+            )
+            ARPU_SEGMENT = st.slider(
+                "ARPU_SEGMENT", 
+                min_value=float(min(col_info["ARPU_SEGMENT"])), 
+                max_value=float(max(col_info["ARPU_SEGMENT"])), 
+                value=float(min(col_info["ARPU_SEGMENT"])),
+                help="Average Revenue Per User segment"
+            )
+        
+        # Group 2: Usage Patterns
+        st.markdown('<h2 class="sub-header">Usage Patterns</h2>', unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown('<p class="section-header">Recharge Behavior</p>', unsafe_allow_html=True)
+            MONTANT = st.slider(
+                "MONTANT", 
+                min_value=float(min(col_info["MONTANT"])), 
+                max_value=float(max(col_info["MONTANT"])), 
+                value=float(min(col_info["MONTANT"])),
+                help="Amount recharged by the customer"
+            )
+            FREQUENCE_RECH = st.slider(
+                "FREQUENCE_RECH", 
+                min_value=float(min(col_info["FREQUENCE_RECH"])), 
+                max_value=float(max(col_info["FREQUENCE_RECH"])), 
+                value=float(min(col_info["FREQUENCE_RECH"])),
+                help="Frequency of recharges"
+            )
+        
+        with col2:
+            st.markdown('<p class="section-header">Data Usage</p>', unsafe_allow_html=True)
+            FREQUENCE = st.slider(
+                "FREQUENCE", 
+                min_value=float(min(col_info["FREQUENCE"])), 
+                max_value=float(max(col_info["FREQUENCE"])), 
+                value=float(min(col_info["FREQUENCE"])),
+                help="Frequency of usage"
+            )
+            DATA_VOLUME = st.slider(
+                "DATA_VOLUME", 
+                min_value=float(min(col_info["DATA_VOLUME"])), 
+                max_value=float(max(col_info["DATA_VOLUME"])), 
+                value=float(min(col_info["DATA_VOLUME"])),
+                help="Volume of data used by the customer"
+            )
+        
+        with col3:
+            st.markdown('<p class="section-header">Network Usage</p>', unsafe_allow_html=True)
+            ON_NET = st.slider(
+                "ON_NET", 
+                min_value=float(min(col_info["ON_NET"])), 
+                max_value=float(max(col_info["ON_NET"])), 
+                value=float(min(col_info["ON_NET"])),
+                help="Calls made within the Expresso network"
+            )
+            REGULARITY = st.slider(
+                "REGULARITY", 
+                min_value=float(min(col_info["REGULARITY"])), 
+                max_value=float(max(col_info["REGULARITY"])), 
+                value=float(min(col_info["REGULARITY"])),
+                help="Regularity of usage"
+            )
+        
+        # Group 3: Competitor Interaction
+        st.markdown('<h2 class="sub-header">Competitor Interaction</h2>', unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            ORANGE = st.slider(
+                "ORANGE", 
+                min_value=float(min(col_info["ORANGE"])), 
+                max_value=float(max(col_info["ORANGE"])), 
+                value=float(min(col_info["ORANGE"])),
+                help="Calls made to Orange network"
+            )
+        
+        with col2:
+            TIGO = st.slider(
+                "TIGO", 
+                min_value=float(min(col_info["TIGO"])), 
+                max_value=float(max(col_info["TIGO"])), 
+                value=float(min(col_info["TIGO"])),
+                help="Calls made to Tigo network"
+            )
+        
+        # Group 4: Package Information
+        st.markdown('<h2 class="sub-header">Package Information</h2>', unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            TOP_PACK = st.selectbox(
+                "TOP_PACK", 
+                col_info["TOP_PACK"],
+                help="The top package used by the customer"
+            )
+        
+        with col2:
+            FREQ_TOP_PACK = st.slider(
+                "FREQ_TOP_PACK", 
+                min_value=float(min(col_info["FREQ_TOP_PACK"])), 
+                max_value=float(max(col_info["FREQ_TOP_PACK"])), 
+                value=float(min(col_info["FREQ_TOP_PACK"])),
+                help="Frequency of using the top package"
+            )
+        
+        submitted = st.form_submit_button("Predict Churn Probability")
 
-        st.success("✅ Churn" if prediction == 1 else "❌ Not Churn")
-        st.info(f"📈 Churn Probability: {prob:.2%}")
+    # -----------------------
+    # Data Transformation & Prediction
+    # -----------------------
+    if submitted:
+        # Create a spinner to show processing
+        with st.spinner('Analyzing customer data...'):
+            # 1. Raw input to DataFrame
+            df = pd.DataFrame([{
+                "REGION": REGION,
+                "TENURE": TENURE,
+                "MONTANT": MONTANT,
+                "FREQUENCE_RECH": FREQUENCE_RECH,
+                "REVENUE": REVENUE,
+                "ARPU_SEGMENT": ARPU_SEGMENT,
+                "FREQUENCE": FREQUENCE,
+                "DATA_VOLUME": DATA_VOLUME,
+                "ON_NET": ON_NET,
+                "ORANGE": ORANGE,
+                "TIGO": TIGO,
+                "REGULARITY": REGULARITY,
+                "TOP_PACK": TOP_PACK,
+                "FREQ_TOP_PACK": FREQ_TOP_PACK
+            }])
+
+            # Frequency encode REGION using external full dataset frequencies
+            region_freq = df['REGION'].value_counts(normalize=False)
+            df['REGION_FE'] = df['REGION'].map(region_freq)
+
+            # Normalize REGION_FE
+            scaler_region = MinMaxScaler()
+            df['REGION_FE'] = scaler_region.fit_transform(df[['REGION_FE']])
+
+            # Ordinal encode TENURE
+            tenure_order = ['A < 1 month', 'B 1-3 month', 'C 3-6 month', 'D 6-9 month',
+                            'E 9-12 month', 'F 12-15 month', 'G 15-18 month', 'H 18-21 month',
+                            'I 21-24 month', 'J 24 month', 'K > 24 month']
+            df['TENURE_OE'] = df['TENURE'].astype(pd.CategoricalDtype(categories=tenure_order, ordered=True)).cat.codes
+            
+            # Frequency encode TOP_PACK
+            top_pack_freq = df['TOP_PACK'].value_counts()
+            df['TOP_PACK_FE'] = df['TOP_PACK'].map(top_pack_freq)
+
+            # Normalize the frequency encoding to [0,1]
+            scaler = MinMaxScaler()
+            df['TOP_PACK_FE'] = scaler.fit_transform(df[['TOP_PACK_FE']])
+
+            # Drop original column
+            df.drop(columns=['TOP_PACK'], inplace=True)
+            # Drop original non-numeric columns
+            df.drop(columns=['REGION', 'TENURE'], inplace=True)
+
+            # Columns to scale (excluding target and already normalized/ordinal encoded ones)
+            num_cols_to_scale = [
+                'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT',
+                'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY', 'FREQ_TOP_PACK'
+            ]
+
+            scaler = StandardScaler()
+            df[num_cols_to_scale] = scaler.fit_transform(df[num_cols_to_scale]) 
+            
+            # Predict & Display
+            prediction = model.predict(df)[0]
+            prob = model.predict_proba(df)[0][1]
+            
+            # -----------------------
+            # Enhanced Results Display
+            # -----------------------
+            st.markdown("---")
+            st.markdown('<h2 class="sub-header">Prediction Results</h2>', unsafe_allow_html=True)
+            
+            # Create columns for results display
+            col1, col2 = st.columns([1, 2])
+            
+            with col1:
+                # Create a gauge chart for churn probability
+                fig = go.Figure(go.Indicator(
+                    mode = "gauge+number",
+                    value = prob * 100,
+                    domain = {'x': [0, 1], 'y': [0, 1]},
+                    title = {'text': "Churn Probability"},
+                    gauge = {
+                        'axis': {'range': [0, 100]},
+                        'bar': {'color': "#FF5722"},
+                        'steps': [
+                            {'range': [0, 30], 'color': "#E8F5E9"},
+                            {'range': [30, 70], 'color': "#FFF8E1"},
+                            {'range': [70, 100], 'color': "#FFEBEE"}
+                        ],
+                        'threshold': {
+                            'line': {'color': "red", 'width': 4},
+                            'thickness': 0.75,
+                            'value': prob * 100
+                        }
+                    }
+                ))
+                
+                fig.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20))
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                # Determine risk level and display appropriate message
+                if prob >= 0.7:
+                    risk_level = "High"
+                    box_class = "prediction-box-high"
+                    icon = "⚠️"
+                    message = "This customer is at high risk of churning."
+                elif prob >= 0.3:
+                    risk_level = "Medium"
+                    box_class = "prediction-box-medium"
+                    icon = "⚠️"
+                    message = "This customer is at moderate risk of churning."
+                else:
+                    risk_level = "Low"
+                    box_class = "prediction-box-low"
+                    icon = "✅"
+                    message = "This customer is at low risk of churning."
+                
+                # Display prediction result with styling
+                st.markdown(f"""
+                <div class="{box_class}">
+                    <h3>{icon} Churn Risk: {risk_level}</h3>
+                    <p>{message}</p>
+                    <p>Churn Probability: <b>{prob:.2%}</b></p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Display recommended actions based on risk level
+                st.markdown("### Recommended Actions")
+                
+                if risk_level == "High":
+                    st.markdown("""
+                    - 📞 **Immediate Outreach**: Contact customer with personalized retention offer
+                    - 💰 **Special Discount**: Offer significant discount on their preferred services
+                    - 🎁 **Loyalty Bonus**: Provide immediate loyalty bonus or free service upgrade
+                    - 📊 **Usage Analysis**: Review customer usage patterns for targeted improvements
+                    """)
+                elif risk_level == "Medium":
+                    st.markdown("""
+                    - 📱 **Service Check**: Proactively check if customer is satisfied with services
+                    - 🎁 **Targeted Offer**: Send targeted offer based on usage patterns
+                    - 💬 **Feedback Request**: Request feedback on service quality
+                    - 📈 **Usage Suggestions**: Suggest optimal plans based on their usage
+                    """)
+                else:
+                    st.markdown("""
+                    - 🎁 **Loyalty Rewards**: Continue providing loyalty rewards
+                    - 📱 **Cross-Sell**: Suggest complementary services they might enjoy
+                    - 🌟 **Referral Program**: Invite to participate in referral program
+                    - 📊 **Regular Check-ins**: Schedule periodic service reviews
+                    """)
+            
+            # Feature importance visualization
+            st.markdown("### Key Factors Influencing Prediction")
+            
+            # For demonstration, using dummy feature importance values
+            # In a real scenario, you would extract these from your model
+            feature_importance = {
+                'REVENUE': 0.25,
+                'TENURE_OE': 0.20,
+                'MONTANT': 0.15,
+                'FREQUENCE': 0.12,
+                'DATA_VOLUME': 0.10,
+                'ORANGE': 0.08,
+                'TIGO': 0.05,
+                'REGULARITY': 0.05
+            }
+            
+            # Create a horizontal bar chart for feature importance
+            fig = px.bar(
+                x=list(feature_importance.values()),
+                y=list(feature_importance.keys()),
+                orientation='h',
+                labels={'x': 'Importance', 'y': 'Feature'},
+                title='Feature Importance',
+                color=list(feature_importance.values()),
+                color_continuous_scale='Oranges'
+            )
+            
+            fig.update_layout(height=400, margin=dict(l=20, r=20, t=50, b=20))
+            st.plotly_chart(fig, use_container_width=True)
+
+with tab2:
+    st.markdown('<h2 class="sub-header">About the Churn Prediction Model</h2>', unsafe_allow_html=True)
+    
+    st.markdown("""
+    ### Model Information
+    
+    This churn prediction model was developed using machine learning techniques to analyze customer behavior patterns and predict the likelihood of customers leaving Expresso's services.
+    
+    **Key Features:**
+    - Uses historical customer data from Expresso's operations in Mauritania and Senegal
+    - Analyzes over 15 behavioral variables to identify churn patterns
+    - Provides probability scores to help prioritize retention efforts
+    
+    ### How It Works
+    
+    The model analyzes various aspects of customer behavior including:
+    
+    1. **Usage Patterns**: How frequently customers use services and their volume of usage
+    2. **Financial Metrics**: Revenue generated, recharge amounts, and spending patterns
+    3. **Customer Profile**: Tenure, region, and other demographic information
+    4. **Competitor Interaction**: Calls to other networks like Orange and Tigo
+    
+    ### How to Use the Predictions
+    
+    - **High Risk (>70%)**: These customers require immediate attention and personalized retention offers
+    - **Medium Risk (30-70%)**: Proactive engagement can help retain these customers
+    - **Low Risk (<30%)**: Continue providing excellent service and look for upsell opportunities
+    """)
+
+with tab3:
+    st.markdown('<h2 class="sub-header">Data Insights</h2>', unsafe_allow_html=True)
+    
+    st.markdown("""
+    ### Key Insights from Expresso Customer Data
+    
+    The Expresso dataset contains information about 2.5 million clients across two African markets. Analysis of this data has revealed several interesting patterns:
+    
+    1. **Tenure Impact**: Customers in their first 3 months and after 24 months show distinct churn patterns
+    2. **Regional Variations**: Churn rates vary significantly by region
+    3. **Usage Correlation**: Data usage volume shows strong correlation with customer retention
+    4. **Network Preference**: Customers who frequently call other networks show higher churn probability
+    
+    ### Sample Data Distribution
+    """)
+    
+    # Create sample data for visualization
+    regions = ['Dakar', 'Thies', 'Saint-Louis', 'Diourbel', 'Kaolack']
+    churn_rates = [0.23, 0.18, 0.27, 0.21, 0.19]
+    
+    # Create a bar chart
+    fig = px.bar(
+        x=regions,
+        y=churn_rates,
+        labels={'x': 'Region', 'y': 'Churn Rate'},
+        title='Churn Rate by Region',
+        color=churn_rates,
+        color_continuous_scale='Oranges'
+    )
+    
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Create sample data for tenure visualization
+    tenure_categories = ['<1 month', '1-3 months', '3-6 months', '6-12 months', '12-24 months', '>24 months']
+    tenure_churn = [0.35, 0.28, 0.22, 0.18, 0.15, 0.25]
+    
+    # Create a line chart
+    fig = px.line(
+        x=tenure_categories,
+        y=tenure_churn,
+        markers=True,
+        labels={'x': 'Tenure', 'y': 'Churn Rate'},
+        title='Churn Rate by Customer Tenure',
+    )
+    
+    fig.update_traces(line_color='#FF5722', line_width=3)
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)

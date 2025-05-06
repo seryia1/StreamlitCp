@@ -51,8 +51,8 @@ if submitted:
             "ORANGE": ORANGE,
             "TIGO": TIGO,
             "REGULARITY": REGULARITY
-            "TOP_PACK":"TOP_PACK"
-            "FREQ_TOP_PACK":"FREQ_TOP_PACK"
+            "TOP_PACK": TOP_PACK
+            "FREQ_TOP_PACK": FREQ_TOP_PACK
         }])
 
         # Frequency encode REGION using external full dataset frequencies (col_info_region_freq must exist)

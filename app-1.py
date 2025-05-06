@@ -73,8 +73,8 @@ if submitted:
         df['TOP_PACK_FE'] = df['TOP_PACK'].map(top_pack_freq)
 
        # Normalize the frequency encoding to [0,1]
-       scaler = MinMaxScaler()
-       df['TOP_PACK_FE'] = scaler.fit_transform(df[['TOP_PACK_FE']])
+        scaler = MinMaxScaler()
+        df['TOP_PACK_FE'] = scaler.fit_transform(df[['TOP_PACK_FE']])
 
         # Drop original column
         df.drop(columns=['TOP_PACK'], inplace=True)

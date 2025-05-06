@@ -36,58 +36,47 @@ with st.form("predict_form"):
 # Data Transformation
 # -----------------------
 if submitted:
-    # 1. Raw input to DataFrame
-    df = pd.DataFrame([{
-        "REGION": REGION,
-        "TENURE": TENURE,
-        "MONTANT": MONTANT,
-        "FREQUENCE_RECH": FREQUENCE_RECH,
-        "REVENUE": REVENUE,
-        "ARPU_SEGMENT": ARPU_SEGMENT,
-        "FREQUENCE": FREQUENCE,
-        "DATA_VOLUME": DATA_VOLUME,
-        "ON_NET": ON_NET,
-        "ORANGE": ORANGE,
-        "TIGO": TIGO,
-        "REGULARITY": REGULARITY,
-    }])
+        # 1. Raw input to DataFrame
+        df = pd.DataFrame([{
+            "REGION": REGION,
+            "TENURE": TENURE,
+            "MONTANT": MONTANT,
+            "FREQUENCE_RECH": FREQUENCE_RECH,
+            "REVENUE": REVENUE,
+            "ARPU_SEGMENT": ARPU_SEGMENT,
+            "FREQUENCE": FREQUENCE,
+            "DATA_VOLUME": DATA_VOLUME,
+            "ON_NET": ON_NET,
+            "ORANGE": ORANGE,
+            "TIGO": TIGO,
+            "REGULARITY": REGULARITY
+        }])
 
-    # Frequency encode REGION
-# Frequency encode REGION
-region_freq = df['REGION'].value_counts(normalize=False)
-df['REGION_FE'] = df['REGION'].map(region_freq)
+        # Frequency encode REGION using external full dataset frequencies (col_info_region_freq must exist)
+        region_freq = pd.Series(col_info["REGION_FE"])  # Make sure this is available
+        df['REGION_FE'] = df['REGION'].map(region_freq).fillna(0)
 
-# Normalize
-scaler = MinMaxScaler()
-df['REGION_FE'] = scaler.fit_transform([['REGION_FE']])
+        # Normalize REGION_FE
+        scaler_region = MinMaxScaler()
+        df['REGION_FE'] = scaler_region.fit_transform(df[['REGION_FE']])
 
-# Ordinal encode TENURE (better)
-tenure_order = ['A < 1 month', 'B 1-3 month', 'C 3-6 month', 'D 6-9 month',
-                'E 9-12 month', 'F 12-15 month', 'G 15-18 month', 'H 18-21 month',
-                'I 21-24 month', 'J 24 month', 'K > 24 month']
-df['TENURE_OE'] = df['TENURE'].astype(pd.CategoricalDtype(categories=tenure_order, ordered=True)).cat.codes
+        # Ordinal encode TENURE
+        tenure_order = ['A < 1 month', 'B 1-3 month', 'C 3-6 month', 'D 6-9 month',
+                        'E 9-12 month', 'F 12-15 month', 'G 15-18 month', 'H 18-21 month',
+                        'I 21-24 month', 'J 24 month', 'K > 24 month']
+        df['TENURE_OE'] = df['TENURE'].astype(pd.CategoricalDtype(categories=tenure_order, ordered=True)).cat.codes
 
-# Frequency encode TOP_PACK
-top_pack_freq = df['TOP_PACK'].value_counts()
-df['TOP_PACK_FE'] = df['TOP_PACK'].map(top_pack_freq)
+        # Drop original non-numeric columns
+        df.drop(columns=['REGION', 'TENURE'], inplace=True)
 
-# Normalize the frequency encoding to [0,1]
-scaler = MinMaxScaler()
-df['TOP_PACK_FE'] = scaler.fit_transform(df[['TOP_PACK_FE']])
+        # Scale numerical features
+        num_cols_to_scale = [
+            'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT',
+            'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY'
+        ]
 
-# Drop original column
-df.drop(columns=['TOP_PACK'], inplace=True)
-df.drop(columns=['REGION', 'TENURE'], inplace=True)
-from sklearn.preprocessing import StandardScaler
-# Columns to scale (excluding target and already normalized/ordinal encoded ones)
-num_cols_to_scale = [
-    'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT',
-    'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY', 'FREQ_TOP_PACK'
-]
-
-# Initialize scaler and fit-transform
-scaler = StandardScaler()
-df[num_cols_to_scale] = scaler.fit_transform(df[num_cols_to_scale]) 
+        scaler = StandardScaler()
+        df[num_cols_to_scale] = scaler.fit_transform(df[num_cols_to_scale]) 
 
     # -----------------------
     # Predict & Display

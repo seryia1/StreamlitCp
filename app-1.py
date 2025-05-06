@@ -54,7 +54,7 @@ if submitted:
 
         # Frequency encode REGION using external full dataset frequencies (col_info_region_freq must exist)
         region_freq = df['REGION'].value_counts(normalize=False)
-        df['REGION_FE'] = df_clean['REGION'].map(region_freq)
+        df['REGION_FE'] = df['REGION'].map(region_freq)
 
         # Normalize REGION_FE
         scaler_region = MinMaxScaler()

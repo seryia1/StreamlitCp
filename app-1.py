@@ -17,19 +17,20 @@ with st.form("predict_form"):
 
     REGION = st.selectbox("REGION", col_info["REGION"])
     TENURE = st.selectbox("TENURE", col_info["TENURE"])
-    
-    MONTANT = st.slider("MONTANT", float(col_info["MONTANT"]["min"]), float(col_info["MONTANT"]["max"]))
-    FREQUENCE_RECH = st.slider("FREQUENCE_RECH", float(col_info["FREQUENCE_RECH"]["min"]), float(col_info["FREQUENCE_RECH"]["max"]))
-    REVENUE = st.slider("REVENUE", float(col_info["REVENUE"]["min"]), float(col_info["REVENUE"]["max"]))
-    ARPU_SEGMENT = st.slider("ARPU_SEGMENT", float(col_info["ARPU_SEGMENT"]["min"]), float(col_info["ARPU_SEGMENT"]["max"]))
-    FREQUENCE = st.slider("FREQUENCE", float(col_info["FREQUENCE"]["min"]), float(col_info["FREQUENCE"]["max"]))
-    DATA_VOLUME = st.slider("DATA_VOLUME", float(col_info["DATA_VOLUME"]["min"]), float(col_info["DATA_VOLUME"]["max"]))
-    ON_NET = st.slider("ON_NET", float(col_info["ON_NET"]["min"]), float(col_info["ON_NET"]["max"]))
-    ORANGE = st.slider("ORANGE", float(col_info["ORANGE"]["min"]), float(col_info["ORANGE"]["max"]))
-    TIGO = st.slider("TIGO", float(col_info["TIGO"]["min"]), float(col_info["TIGO"]["max"]))
-    REGULARITY = st.slider("REGULARITY", float(col_info["REGULARITY"]["min"]), float(col_info["REGULARITY"]["max"]))
+
+    MONTANT = st.slider("MONTANT", min_value=float(min(col_info["MONTANT"])), max_value=float(max(col_info["MONTANT"])), value=float(min(col_info["MONTANT"])))
+    FREQUENCE_RECH = st.slider("FREQUENCE_RECH", min_value=float(min(col_info["FREQUENCE_RECH"])), max_value=float(max(col_info["FREQUENCE_RECH"])), value=float(min(col_info["FREQUENCE_RECH"])))
+    REVENUE = st.slider("REVENUE", min_value=float(min(col_info["REVENUE"])), max_value=float(max(col_info["REVENUE"])), value=float(min(col_info["REVENUE"])))
+    ARPU_SEGMENT = st.slider("ARPU_SEGMENT", min_value=float(min(col_info["ARPU_SEGMENT"])), max_value=float(max(col_info["ARPU_SEGMENT"])), value=float(min(col_info["ARPU_SEGMENT"])))
+    FREQUENCE = st.slider("FREQUENCE", min_value=float(min(col_info["FREQUENCE"])), max_value=float(max(col_info["FREQUENCE"])), value=float(min(col_info["FREQUENCE"])))
+    DATA_VOLUME = st.slider("DATA_VOLUME", min_value=float(min(col_info["DATA_VOLUME"])), max_value=float(max(col_info["DATA_VOLUME"])), value=float(min(col_info["DATA_VOLUME"])))
+    ON_NET = st.slider("ON_NET", min_value=float(min(col_info["ON_NET"])), max_value=float(max(col_info["ON_NET"])), value=float(min(col_info["ON_NET"])))
+    ORANGE = st.slider("ORANGE", min_value=float(min(col_info["ORANGE"])), max_value=float(max(col_info["ORANGE"])), value=float(min(col_info["ORANGE"])))
+    TIGO = st.slider("TIGO", min_value=float(min(col_info["TIGO"])), max_value=float(max(col_info["TIGO"])), value=float(min(col_info["TIGO"])))
+    REGULARITY = st.slider("REGULARITY", min_value=float(min(col_info["REGULARITY"])), max_value=float(max(col_info["REGULARITY"])), value=float(min(col_info["REGULARITY"])))
 
     submitted = st.form_submit_button("Predict")
+
 
 # -----------------------
 # Data Transformation

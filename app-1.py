@@ -28,7 +28,8 @@ with st.form("predict_form"):
     ORANGE = st.slider("ORANGE", min_value=float(min(col_info["ORANGE"])), max_value=float(max(col_info["ORANGE"])), value=float(min(col_info["ORANGE"])))
     TIGO = st.slider("TIGO", min_value=float(min(col_info["TIGO"])), max_value=float(max(col_info["TIGO"])), value=float(min(col_info["TIGO"])))
     REGULARITY = st.slider("REGULARITY", min_value=float(min(col_info["REGULARITY"])), max_value=float(max(col_info["REGULARITY"])), value=float(min(col_info["REGULARITY"])))
-
+    TOP_PACK=  st.selectbox("TOP_PACK", col_info["TOP_PACK"])
+    FREQ_TOP_PACK = st.slider("FREQ_TOP_PACK", min_value=float(min(col_info["FREQ_TOP_PACK"])), max_value=float(max(col_info["FREQ_TOP_PACK"])), value=float(min(col_info["FREQ_TOP_PACK"])))
     submitted = st.form_submit_button("Predict")
 
 
@@ -50,6 +51,8 @@ if submitted:
             "ORANGE": ORANGE,
             "TIGO": TIGO,
             "REGULARITY": REGULARITY
+            "TOP_PACK":"TOP_PACK"
+            "FREQ_TOP_PACK":"FREQ_TOP_PACK"
         }])
 
         # Frequency encode REGION using external full dataset frequencies (col_info_region_freq must exist)
@@ -65,15 +68,24 @@ if submitted:
                         'E 9-12 month', 'F 12-15 month', 'G 15-18 month', 'H 18-21 month',
                         'I 21-24 month', 'J 24 month', 'K > 24 month']
         df['TENURE_OE'] = df['TENURE'].astype(pd.CategoricalDtype(categories=tenure_order, ordered=True)).cat.codes
+        # Frequency encode TOP_PACK
+        top_pack_freq = df['TOP_PACK'].value_counts()
+        df['TOP_PACK_FE'] = df['TOP_PACK'].map(top_pack_freq)
 
+       # Normalize the frequency encoding to [0,1]
+       scaler = MinMaxScaler()
+       df['TOP_PACK_FE'] = scaler.fit_transform(df[['TOP_PACK_FE']])
+
+        # Drop original column
+        df.drop(columns=['TOP_PACK'], inplace=True)
         # Drop original non-numeric columns
         df.drop(columns=['REGION', 'TENURE'], inplace=True)
 
-        # Scale numerical features
+        # Columns to scale (excluding target and already normalized/ordinal encoded ones)
         num_cols_to_scale = [
-            'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT',
-            'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY'
-        ]
+    'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT',
+    'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO', 'REGULARITY', 'FREQ_TOP_PACK'
+]
 
         scaler = StandardScaler()
         df[num_cols_to_scale] = scaler.fit_transform(df[num_cols_to_scale]) 

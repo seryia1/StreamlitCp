@@ -50,8 +50,8 @@ if submitted:
             "ON_NET": ON_NET,
             "ORANGE": ORANGE,
             "TIGO": TIGO,
-            "REGULARITY": REGULARITY
-            "TOP_PACK": TOP_PACK
+            "REGULARITY": REGULARITY,
+            "TOP_PACK": TOP_PACK,
             "FREQ_TOP_PACK": FREQ_TOP_PACK
         }])
 

@@ -4,9 +4,10 @@ import numpy as np
 import joblib
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
-# Load model and preprocessing references
+# Load saved model & references
 model = joblib.load("clf.joblib")
-col_info = joblib.load("unique_elements_dict2.joblib")  # Includes options & frequencies for encoding
+
+col_info = joblib.load("unique_elements_dict2.joblib")  # Contains options like TENURE, REGION, TOP_PACK
 
 # UI Form
 with st.form("predict_form"):

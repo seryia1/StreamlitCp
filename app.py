@@ -6,33 +6,41 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 # Load saved model & references
 model = joblib.load("clf.joblib")
-
 col_info = joblib.load("unique_elements_dict2.joblib")  # Contains options like TENURE, REGION, TOP_PACK
 
-# UI Form
+# -----------------------
+# UI: User Input Form
+# -----------------------
 with st.form("predict_form"):
     st.title("📱 Churn Prediction (Expresso Users)")
 
-    REGION = st.selectbox("REGION", col_info["REGION"])
-    TENURE = st.selectbox("TENURE", col_info["TENURE"])
+    REGION = st.selectbox("REGION", ["Select..."] + col_info["REGION"])
+    TENURE = st.selectbox("TENURE", ["Select..."] + col_info["TENURE"])
 
-    MONTANT = st.slider("MONTANT", float(min(col_info["MONTANT"])), float(max(col_info["MONTANT"])), float(min(col_info["MONTANT"])))
-    FREQUENCE_RECH = st.slider("FREQUENCE_RECH", float(min(col_info["FREQUENCE_RECH"])), float(max(col_info["FREQUENCE_RECH"])), float(min(col_info["FREQUENCE_RECH"])))
-    REVENUE = st.slider("REVENUE", float(min(col_info["REVENUE"])), float(max(col_info["REVENUE"])), float(min(col_info["REVENUE"])))
-    ARPU_SEGMENT = st.slider("ARPU_SEGMENT", float(min(col_info["ARPU_SEGMENT"])), float(max(col_info["ARPU_SEGMENT"])), float(min(col_info["ARPU_SEGMENT"])))
-    FREQUENCE = st.slider("FREQUENCE", float(min(col_info["FREQUENCE"])), float(max(col_info["FREQUENCE"])), float(min(col_info["FREQUENCE"])))
-    DATA_VOLUME = st.slider("DATA_VOLUME", float(min(col_info["DATA_VOLUME"])), float(max(col_info["DATA_VOLUME"])), float(min(col_info["DATA_VOLUME"])))
-    ON_NET = st.slider("ON_NET", float(min(col_info["ON_NET"])), float(max(col_info["ON_NET"])), float(min(col_info["ON_NET"])))
-    ORANGE = st.slider("ORANGE", float(min(col_info["ORANGE"])), float(max(col_info["ORANGE"])), float(min(col_info["ORANGE"])))
-    TIGO = st.slider("TIGO", float(min(col_info["TIGO"])), float(max(col_info["TIGO"])), float(min(col_info["TIGO"])))
-    REGULARITY = st.slider("REGULARITY", float(min(col_info["REGULARITY"])), float(max(col_info["REGULARITY"])), float(min(col_info["REGULARITY"])))
-    TOP_PACK = st.selectbox("TOP_PACK", col_info["TOP_PACK"])
-    FREQ_TOP_PACK = st.slider("FREQ_TOP_PACK", float(min(col_info["FREQ_TOP_PACK"])), float(max(col_info["FREQ_TOP_PACK"])), float(min(col_info["FREQ_TOP_PACK"])))
-
+    MONTANT = st.slider("MONTANT", min_value=float(min(col_info["MONTANT"])), max_value=float(max(col_info["MONTANT"])), value=float(min(col_info["MONTANT"])))
+    FREQUENCE_RECH = st.slider("FREQUENCE_RECH", min_value=float(min(col_info["FREQUENCE_RECH"])), max_value=float(max(col_info["FREQUENCE_RECH"])), value=float(min(col_info["FREQUENCE_RECH"])))
+    REVENUE = st.slider("REVENUE", min_value=float(min(col_info["REVENUE"])), max_value=float(max(col_info["REVENUE"])), value=float(min(col_info["REVENUE"])))
+    ARPU_SEGMENT = st.slider("ARPU_SEGMENT", min_value=float(min(col_info["ARPU_SEGMENT"])), max_value=float(max(col_info["ARPU_SEGMENT"])), value=float(min(col_info["ARPU_SEGMENT"])))
+    FREQUENCE = st.slider("FREQUENCE", min_value=float(min(col_info["FREQUENCE"])), max_value=float(max(col_info["FREQUENCE"])), value=float(min(col_info["FREQUENCE"])))
+    DATA_VOLUME = st.slider("DATA_VOLUME", min_value=float(min(col_info["DATA_VOLUME"])), max_value=float(max(col_info["DATA_VOLUME"])), value=float(min(col_info["DATA_VOLUME"])))
+    ON_NET = st.slider("ON_NET", min_value=float(min(col_info["ON_NET"])), max_value=float(max(col_info["ON_NET"])), value=float(min(col_info["ON_NET"])))
+    ORANGE = st.slider("ORANGE", min_value=float(min(col_info["ORANGE"])), max_value=float(max(col_info["ORANGE"])), value=float(min(col_info["ORANGE"])))
+    TIGO = st.slider("TIGO", min_value=float(min(col_info["TIGO"])), max_value=float(max(col_info["TIGO"])), value=float(min(col_info["TIGO"])))
+    REGULARITY = st.slider("REGULARITY", min_value=float(min(col_info["REGULARITY"])), max_value=float(max(col_info["REGULARITY"])), value=float(min(col_info["REGULARITY"])))
+    TOP_PACK = st.selectbox("TOP_PACK", ["Select..."] + col_info["TOP_PACK"])
+    FREQ_TOP_PACK = st.slider("FREQ_TOP_PACK", min_value=float(min(col_info["FREQ_TOP_PACK"])), max_value=float(max(col_info["FREQ_TOP_PACK"])), value=float(min(col_info["FREQ_TOP_PACK"])))
+    
     submitted = st.form_submit_button("Predict")
 
+# -----------------------
+# Data Transformation & Prediction
+# -----------------------
 if submitted:
-    # Step 1: Raw input into DataFrame
+    if REGION == "Select..." or TENURE == "Select..." or TOP_PACK == "Select...":
+        st.warning("Please select values for REGION, TENURE, and TOP_PACK.")
+        st.stop()
+
+    # 1. Raw input to DataFrame
     df = pd.DataFrame([{
         "REGION": REGION,
         "TENURE": TENURE,
@@ -50,34 +58,44 @@ if submitted:
         "FREQ_TOP_PACK": FREQ_TOP_PACK
     }])
 
-    # Step 2: Feature Engineering & Encoding
+    # Frequency encode REGION using local value count (fallback option)
+    region_freq = df['REGION'].value_counts(normalize=False)
+    df['REGION_FE'] = df['REGION'].map(region_freq)
 
-    # --- Frequency Encoding (from col_info, based on full dataset) ---
-    df['REGION_FE'] = df['REGION'].map(col_info["REGION_FE"]).fillna(0)
-    df['TOP_PACK_FE'] = df['TOP_PACK'].map(col_info["TOP_PACK_FE"]).fillna(0)
+    # Normalize REGION_FE
+    scaler_region = MinMaxScaler()
+    df['REGION_FE'] = scaler_region.fit_transform(df[['REGION_FE']])
 
-    # --- Normalization of REGION_FE & TOP_PACK_FE ---
-    df[['REGION_FE']] = MinMaxScaler().fit_transform(np.array(df['REGION_FE']).reshape(-1, 1))
-    df[['TOP_PACK_FE']] = MinMaxScaler().fit_transform(np.array(df['TOP_PACK_FE']).reshape(-1, 1))
-
-    # --- Ordinal Encoding for TENURE ---
+    # Ordinal encode TENURE
     tenure_order = ['A < 1 month', 'B 1-3 month', 'C 3-6 month', 'D 6-9 month',
                     'E 9-12 month', 'F 12-15 month', 'G 15-18 month', 'H 18-21 month',
                     'I 21-24 month', 'J 24 month', 'K > 24 month']
     df['TENURE_OE'] = df['TENURE'].astype(pd.CategoricalDtype(categories=tenure_order, ordered=True)).cat.codes
 
-    # --- Drop raw categorical fields ---
+    # Frequency encode TOP_PACK
+    top_pack_freq = df['TOP_PACK'].value_counts()
+    df['TOP_PACK_FE'] = df['TOP_PACK'].map(top_pack_freq)
+
+    # Normalize the frequency encoding to [0,1]
+    scaler = MinMaxScaler()
+    df['TOP_PACK_FE'] = scaler.fit_transform(df[['TOP_PACK_FE']])
+
+    # Drop original non-numeric columns
     df.drop(columns=['REGION', 'TENURE', 'TOP_PACK'], inplace=True)
 
-    # Step 3: Scale Numerical Features
-    num_cols = [
+    # Columns to scale
+    num_cols_to_scale = [
         'MONTANT', 'FREQUENCE_RECH', 'REVENUE', 'ARPU_SEGMENT',
         'FREQUENCE', 'DATA_VOLUME', 'ON_NET', 'ORANGE', 'TIGO',
         'REGULARITY', 'FREQ_TOP_PACK'
     ]
-    df[num_cols] = StandardScaler().fit_transform(df[num_cols])
 
-    # Step 4: Predict & Display
+    scaler = StandardScaler()
+    df[num_cols_to_scale] = scaler.fit_transform(df[num_cols_to_scale])
+
+    # -----------------------
+    # Predict & Display
+    # -----------------------
     prediction = model.predict(df)[0]
     prob = model.predict_proba(df)[0][1]
 

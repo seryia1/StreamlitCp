@@ -77,7 +77,7 @@ if submitted:
 
         scaler = StandardScaler()
         df[num_cols_to_scale] = scaler.fit_transform(df[num_cols_to_scale]) 
-
+        df
     # -----------------------
     # Predict & Display
     # -----------------------
